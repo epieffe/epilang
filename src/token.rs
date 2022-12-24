@@ -5,8 +5,6 @@ use crate::expression::Var;
 pub enum Token {
     RoundBracketOpen,
     RoundBracketClosed,
-    CurlyBracketOpen,
-    CurlyBracketClosed,
     Operand(Operand),
     Operator(Operator),
 }
@@ -33,6 +31,7 @@ impl Operand {
 
 #[derive(Copy, Clone)]
 pub enum Operator {
+    Seq,
     Assign,
     And,
     Or,
@@ -43,13 +42,12 @@ pub enum Operator {
     Sum,
     Sub,
     Mul,
-    Div,
+    Div
 }
 
 impl Operator {
     pub fn precedence(&self) -> i32 {
         match self {
-            Operator::Assign => 0,
             Operator::Mul => 1,
             Operator::Div => 1,
             Operator::Sum => 2,
@@ -59,7 +57,9 @@ impl Operator {
             Operator::Gt => 4,
             Operator::Eq => 4,
             Operator::And => 5,
-            Operator::Or => 6
+            Operator::Or => 6,
+            Operator::Assign => 7,
+            Operator::Seq => 8,
         }
     }
 }
