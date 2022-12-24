@@ -1,14 +1,3 @@
-pub struct Var {
-    pub name: String
-}
-
-pub enum Const {
-    Integer(i32),
-    Boolean(bool),
-    String(String),
-    None
-}
-
 pub enum Exp {
     Const(Const),// Eg: 1, False, None, "Hello"
     Var(Var),// Eg: x, y, z
@@ -19,4 +8,15 @@ pub enum Exp {
     Sub(Box<Exp>, Box<Exp>),// Eg: x - y
     Mul(Box<Exp>, Box<Exp>),// Eg: x * y
     Div(Box<Exp>, Box<Exp>),// Eg: x / y
+}
+
+pub struct Var {
+    pub name: String
+}
+
+pub enum Const {
+    Integer(i32),
+    Boolean(bool),
+    String(String),
+    None
 }
