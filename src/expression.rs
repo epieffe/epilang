@@ -3,8 +3,8 @@ pub enum Exp {
     Const(Const),
     // Eg: x, y, z
     Var(Var),
-    // Eg: let x
-    Decl(Var, Box<Exp>),
+    // Eg: let x = y
+    Decl(Var, Box<Exp>, Box<Exp>),
     // Eg: x = 3
     Assign(Var, Box<Exp>),
     // Eg: x; y

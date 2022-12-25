@@ -34,7 +34,7 @@ fn main() {
         Token::Operand(Operand::Int(2)),
     ];
     */
-    let p = "x = 5 ; if true { 3 } else { 4 }";
+    let p = "x = 5 ; if true { x = 4 ; 3 } else { 4 }";
     let mut tokens: Vec<Token> = tokenize(String::from(p))
         .expect("Errore tokens");
 
@@ -59,7 +59,7 @@ fn exp_to_string(exp: Exp) -> String {
     match exp {
         Exp::Const(c) => const_to_string(c),
         Exp::Var(x) => x.name,
-        Exp::Decl(x, e) => format!("let {};\n{}", x.name, exp_to_string(*e)),
+        Exp::Decl(x, val, e) => format!("let {} = {};\n{}", x.name, exp_to_string(*val), exp_to_string(*e)),
         Exp::Assign(x, e) => format!("{} = {}", x.name, exp_to_string(*e)),
         Exp::Seq(e1, e2) => format!("{};\n {}", exp_to_string(*e1), exp_to_string(*e2)),
         Exp::Sum(e1, e2) => format!("{} + {}", exp_to_string(*e1), exp_to_string(*e2)),

@@ -5,16 +5,21 @@ use crate::token::Token;
 use crate::token::Operator;
 
 pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, ()>  {
-    parse_tokens(tokens, vec![])
+    match parse_tokens(tokens, vec![]) {
+        Result::Ok((exp, _)) => Result::Ok(exp),
+        Result::Err(err) => Result::Err(err)
+    }
 }
 
-fn parse_tokens(tokens: &mut Vec<Token>, stop_tokens: Vec<Token>) -> Result<Exp, ()> {
+fn parse_tokens(tokens: &mut Vec<Token>, stop_tokens: Vec<Token>) -> Result<(Exp, Option<Token>), ()> {
     let mut stack: Vec<Token> = Vec::new();
     let mut out: Vec<Exp> = Vec::new();
 
+    let mut last_token_processed: Option<Token>;
     loop {
+        last_token_processed = tokens.pop();
         // Stop parsing if current token is a stop token or there are no more tokens
-        let token = match tokens.pop() {
+        let token = match &last_token_processed {
             Option::None => if stop_tokens.is_empty() {
                 break
             } else {
@@ -38,7 +43,7 @@ fn parse_tokens(tokens: &mut Vec<Token>, stop_tokens: Vec<Token>) -> Result<Exp,
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
             },
-            Token::If => match handle_if_token(tokens, &mut stack, &mut out) {
+            Token::If => match handle_if_token(tokens, &mut out) {
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
             },
@@ -65,18 +70,18 @@ fn parse_tokens(tokens: &mut Vec<Token>, stop_tokens: Vec<Token>) -> Result<Exp,
     if out.len() != 1 {
         Result::Err(())
     } else {
-        Result::Ok(out.pop().unwrap())
+        Result::Ok((out.pop().unwrap(), last_token_processed))
     }
 }
 
-fn handle_if_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), ()> {
+fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), ()> {
     let condition: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketOpen]) {
-        Result::Ok(exp) => exp,
+        Result::Ok((exp, _)) => exp,
         Result::Err(e) => return Result::Err(e)
     };
 
     let if_branch: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed]) {
-        Result::Ok(exp) => exp,
+        Result::Ok((exp, _)) => exp,
         Result::Err(e) => return Result::Err(e)
     };
 
@@ -85,7 +90,7 @@ fn handle_if_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Ve
             tokens.pop();
             match tokens.pop() {
                 Option::Some(Token::CurlyBracketOpen) => match parse_tokens(tokens, vec![Token::CurlyBracketClosed]) {
-                    Result::Ok(exp) => exp,
+                    Result::Ok((exp, _)) => exp,
                     Result::Err(err) => return Result::Err(err)
                 }
                 _ => return Result::Err(())
@@ -233,5 +238,3 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), ()> {
     }
     Result::Ok(())
 }
-
-
