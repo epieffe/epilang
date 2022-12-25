@@ -3,11 +3,30 @@ use crate::expression::Const;
 use crate::expression::Var;
 
 pub enum Token {
-    RoundBracketOpen,
-    RoundBracketClosed,
     Operand(Operand),
     Operator(Operator),
+    If,
+    Else,
+    RoundBracketOpen,
+    RoundBracketClosed,
+    CurlyBracketOpen,
+    CurlyBracketClosed,
 }
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Token::If, Token::If) => true,
+            (Token::Else, Token::Else) => true,
+            (Token::RoundBracketOpen, Token::RoundBracketOpen) => true,
+            (Token::RoundBracketClosed, Token::RoundBracketClosed) => true,
+            (Token::CurlyBracketOpen, Token::CurlyBracketOpen) => true,
+            (Token::CurlyBracketClosed, Token::CurlyBracketClosed) => true,
+            _ => false
+        }
+    }
+}
+
 
 pub enum Operand {
     None,

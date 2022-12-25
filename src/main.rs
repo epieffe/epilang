@@ -34,11 +34,11 @@ fn main() {
         Token::Operand(Operand::Int(2)),
     ];
     */
-    let p = "x = 5 ; y = ! 4";
-    let mut tokens = tokenize(String::from(p))
+    let p = "x = 5 ; if true { 3 } else { 4 }";
+    let mut tokens: Vec<Token> = tokenize(String::from(p))
         .expect("Errore tokens");
 
-    match parse(tokens) {
+    match parse(&mut tokens) {
         Result::Err(_) => panic!("Syntex error"),
         Result::Ok(exp) => {
             println!("{}", exp_to_string(exp));
@@ -71,7 +71,8 @@ fn exp_to_string(exp: Exp) -> String {
         Exp::Eq(e1, e2) => format!("{} == {}", exp_to_string(*e1), exp_to_string(*e2)),
         Exp::And(e1, e2) => format!("{} && {}", exp_to_string(*e1), exp_to_string(*e2)),
         Exp::Or(e1, e2) => format!("{} || {}", exp_to_string(*e1), exp_to_string(*e2)),
-        Exp::Not(e) => format!("!{}", exp_to_string(*e))
+        Exp::Not(e) => format!("!{}", exp_to_string(*e)),
+        Exp::IfThenElse(e, e1, e2) => format!("if {} {{ {} }} else {{ {} }}", exp_to_string(*e), exp_to_string(*e1), exp_to_string(*e2))
     }
 }
 

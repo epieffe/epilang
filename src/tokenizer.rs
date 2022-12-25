@@ -17,6 +17,12 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             ">" => Token::Operator(Operator::Gt),
             "+" => Token::Operator(Operator::Sum),
             "-" => Token::Operator(Operator::Sub),
+            "if" => Token::If,
+            "else" => Token:: Else,
+            "(" => Token::RoundBracketOpen,
+            ")" => Token::RoundBracketClosed,
+            "{" => Token::CurlyBracketOpen,
+            "}" => Token::CurlyBracketClosed,
             s => {
                 match s.parse::<i32>() {
                     Result::Ok(i) => Token::Operand(Operand::Int(i)),
