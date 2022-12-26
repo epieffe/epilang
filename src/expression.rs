@@ -34,9 +34,11 @@ pub enum Exp {
 }
 
 pub struct Var {
-    pub name: String
+    pub name: String,
+    pub scope: usize
 }
 
+#[derive(Clone)]
 pub enum Const {
     Integer(i32),
     Boolean(bool),

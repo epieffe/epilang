@@ -48,7 +48,7 @@ impl Operand {
             Operand::Int(i) => Exp::Const(Const::Integer(*i)),
             Operand::Bool(b) => Exp::Const(Const::Boolean(*b)),
             Operand::Str(s) => Exp::Const(Const::String(s.clone())),
-            Operand::Var(x) => Exp::Var(Var{name: x.clone()}),
+            Operand::Var(_) => panic!("Never call to_exp() on variables because we need to know the scope to parse them correctly"),
         }
     }
 }

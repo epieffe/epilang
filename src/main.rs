@@ -2,6 +2,7 @@ mod expression;
 mod token;
 mod parser;
 mod tokenizer;
+mod semantics;
 
 use tokenizer::tokenize;
 use parser::parse;
@@ -47,7 +48,7 @@ fn main() {
         .expect("Errore tokens");
 
     match parse(&mut tokens) {
-        Result::Err(_) => panic!("Syntex error"),
+        Result::Err(_) => panic!("Syntax error"),
         Result::Ok(exp) => {
             println!("{}", exp_to_string(exp));
         }
@@ -66,9 +67,9 @@ fn const_to_string(c: Const) -> String {
 fn exp_to_string(exp: Exp) -> String {
     match exp {
         Exp::Const(c) => const_to_string(c),
-        Exp::Var(x) => x.name,
-        Exp::Decl(x, val, e) => format!("let {} = {};\n{}", x.name, exp_to_string(*val), exp_to_string(*e)),
-        Exp::Assign(x, e) => format!("{} = {}", x.name, exp_to_string(*e)),
+        Exp::Var(x) => x.scope.to_string(),
+        Exp::Decl(x, val, e) => format!("let x{} = {};\n{}", x.scope, exp_to_string(*val), exp_to_string(*e)),
+        Exp::Assign(x, e) => format!("x{} = {}", x.scope, exp_to_string(*e)),
         Exp::Seq(e1, e2) => format!("{};\n {}", exp_to_string(*e1), exp_to_string(*e2)),
         Exp::Sum(e1, e2) => format!("{} + {}", exp_to_string(*e1), exp_to_string(*e2)),
         Exp::Sub(e1, e2) => format!("{} - {}", exp_to_string(*e1), exp_to_string(*e2)),

@@ -1,26 +1,30 @@
+use std::collections::HashMap;
+
 use crate::expression::Exp;
 use crate::expression::Const;
+use crate::expression::Var;
 
 use crate::token::Token;
+use crate::token::Operand;
 use crate::token::Operator;
 
-pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, Error>  {
-    match parse_tokens(tokens, vec![], 0, Option::None) {
+pub struct SyntaxError {}
+
+pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, SyntaxError>  {
+    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
+    match parse_tokens(tokens, 0, &mut variable_scope_map, vec![], Option::None) {
         Result::Ok((exp, _)) => Result::Ok(exp),
         Result::Err(err) => Result::Err(err)
     }
 }
 
-pub enum Error {
-    SyntaxError,
-}
-
 fn parse_tokens(
     tokens: &mut Vec<Token>,
+    scope: usize,
+    variable_scope_map: &mut HashMap<String, usize>,
     stop_tokens: Vec<Token>,
-    scope: u32,
-    stop_on_scope: Option<u32>,
-) -> Result<(Exp, Option<Token>), Error> {
+    stop_on_scope: Option<usize>,
+) -> Result<(Exp, Option<Token>), SyntaxError> {
 
     let mut stack: Vec<Token> = Vec::new();
     let mut out: Vec<Exp> = Vec::new();
@@ -33,7 +37,7 @@ fn parse_tokens(
             Option::None => if stop_tokens.is_empty() {
                 break
             } else {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             Option::Some(token) => if stop_tokens.contains(token) {
                 break
@@ -43,7 +47,14 @@ fn parse_tokens(
         };
 
         match token {
+            // Push variable to out. Error if not present in scope
+            Token::Operand(Operand::Var(x)) => match variable_scope_map.get(x) {
+                Option::Some(s) => out.push(Exp::Var(Var{name: x.to_string(), scope: *s})),
+                Option::None => return Result::Err(SyntaxError{})
+            }
+            // Operands that are not variables are easily pushed to out
             Token::Operand(o) => out.push(o.to_exp()),
+            // Handle operator tokens (eg: +, -, *, /, &&, ||, !)
             Token::Operator(op) => match handle_operator_token(op, &mut stack, &mut out) {
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
@@ -53,16 +64,22 @@ fn parse_tokens(
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
             },
-            Token::If => match handle_if_token(tokens, &mut out, scope, stop_on_scope) {
+            Token::If => match handle_if_token(tokens, &mut out, variable_scope_map, scope, stop_on_scope) {
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
             },
-            Token::Let => match handle_let_token(tokens, &mut out, scope) {
+            Token::Let => match handle_let_token(tokens, &mut out, variable_scope_map, scope) {
                 Result::Ok(_) => (),
                 Result::Err(err) => return Result::Err(err)
             },
             Token::CurlyBracketOpen => {
-                let exp: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope, Option::None) {
+                let exp: Exp = match parse_tokens(
+                    tokens,
+                    scope,
+                    variable_scope_map,
+                    vec![Token::CurlyBracketClosed],
+                    Option::None
+                ) {
                     Result::Ok((exp, _)) => exp,
                     Result::Err(err) => return Result::Err(err)
                 };
@@ -76,7 +93,7 @@ fn parse_tokens(
                     _ => ()
                 }
             }
-            Token::Else => return Result::Err(Error::SyntaxError)
+            Token::Else => return Result::Err(SyntaxError{})
         }
     }
 
@@ -86,37 +103,56 @@ fn parse_tokens(
     }
 }
 
-fn final_process(stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<Exp, Error> {
+fn final_process(stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<Exp, SyntaxError> {
     loop {
         match stack.pop() {
             Option::None => break,
-            Option::Some(Token::RoundBracketOpen) => return Result::Err(Error::SyntaxError),
+            Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{}),
             Option::Some(Token::Operator(op)) => {
-                let result: Result<(), Error> = push_operator_to_out(&op, out);
+                let result: Result<(), SyntaxError> = push_operator_to_out(&op, out);
                 match result {
                     Result::Ok(()) => (),
                     Result::Err(err) => return Result::Err(err)
                 };
             }
-            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(Error::SyntaxError),
+            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(SyntaxError{}),
             Option::Some(Token::RoundBracketClosed | Token::Operand(_) | Token::Let | Token::If | Token::Else) => panic!("This can never happer")
         }
     }
     
     if out.len() != 1 {
-        Result::Err(Error::SyntaxError)
+        Result::Err(SyntaxError{})
     } else {
         Result::Ok(out.pop().unwrap())
     }
 }
 
-fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32, stop_on_scope: Option<u32>) -> Result<(), Error> {
-    let condition: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketOpen], scope, Option::None) {
+fn handle_if_token(
+    tokens: &mut Vec<Token>,
+    out: &mut Vec<Exp>,
+    variable_scope_map: &mut HashMap<String, usize>,
+    scope: usize,
+    stop_on_scope: Option<usize>
+) -> Result<(), SyntaxError> {
+
+    let condition: Exp = match parse_tokens(
+        tokens,
+        scope,
+        variable_scope_map,
+        vec![Token::CurlyBracketOpen],
+        Option::None
+    ) {
         Result::Ok((exp, _)) => exp,
         Result::Err(e) => return Result::Err(e)
     };
 
-    let if_branch: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope, Option::None) {
+    let if_branch: Exp = match parse_tokens(
+        tokens,
+        scope,
+        variable_scope_map,
+        vec![Token::CurlyBracketClosed],
+        Option::None
+    ) {
         Result::Ok((exp, _)) => exp,
         Result::Err(e) => return Result::Err(e)
     };
@@ -125,11 +161,16 @@ fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32, stop
         Option::Some(Token::Else) => {
             tokens.pop();
             match tokens.pop() {
-                Option::Some(Token::CurlyBracketOpen) => match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope, stop_on_scope) {
+                Option::Some(Token::CurlyBracketOpen) => match parse_tokens(
+                    tokens, scope,
+                    variable_scope_map,
+                    vec![Token::CurlyBracketClosed],
+                    stop_on_scope
+                ) {
                     Result::Ok((exp, _)) => exp,
                     Result::Err(err) => return Result::Err(err)
                 }
-                _ => return Result::Err(Error::SyntaxError)
+                _ => return Result::Err(SyntaxError{})
             }
         }
         _ => Exp::Const(Const::None)
@@ -141,23 +182,49 @@ fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32, stop
     Result::Ok(())
 }
 
-fn handle_let_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32) -> Result<(), Error> {
-    let (var, last_token) = match parse_tokens(tokens, vec![Token::Operator(Operator::Assign), Token::Operator(Operator::Seq)], scope, Option::None) {
-        Result::Ok((Exp::Var(x), last_token)) => (x, last_token),
-        Result::Ok((_, _)) => return Result::Err(Error::SyntaxError),
-        Result::Err(err) => return Result::Err(err)
+fn handle_let_token(
+    tokens: &mut Vec<Token>,
+    out: &mut Vec<Exp>,
+    variable_scope_map: &mut HashMap<String, usize>,
+    scope: usize
+) -> Result<(), SyntaxError> {
+
+    // Parse variable after the let token
+    let var: Var = match tokens.pop() {
+        Option::Some(Token::Operand(Operand::Var(name))) => (Var{name: name, scope: scope}),
+        _ => return Result::Err(SyntaxError{})
     };
-    let value: Exp = match last_token {
+
+    let value: Exp = match tokens.pop() {
+        // If next token is '=' the variable is assigned during declaration
         Option::Some(Token::Operator(Operator::Assign)) => {
-            match parse_tokens(tokens, vec![Token::Operator(Operator::Seq)], scope, Option::None) {
+            match parse_tokens(
+                tokens,
+                scope,
+                variable_scope_map,
+                vec![Token::Operator(Operator::Seq)],
+                Option::None
+            ) {
                 Result::Ok((exp, _)) => exp,
                 Result::Err(err) => return Result::Err(err)
             }
         },
+        // If next token is ';' we assign None to the variable during declaration
         Option::Some(Token::Operator(Operator::Seq)) => Exp::Const(Const::None),
-        _ => panic!("this can never happen")
+        _ => return Result::Err(SyntaxError {})
     };
-    let exp: Exp = match parse_tokens(tokens, vec![], scope + 1, Option::Some(scope)) {
+
+    // Add this variable to the scope
+    variable_scope_map.insert(var.name.to_string(), scope);
+
+    // Parse until this scope closure
+    let exp: Exp = match parse_tokens(
+        tokens,
+        scope + 1,
+        variable_scope_map,
+        vec![],
+        Option::Some(scope)
+    ) {
         Result::Ok((exp, last_token)) => {
             match last_token {
                 // If the last processed token was a closed curly bracket we need to process it again
@@ -173,26 +240,26 @@ fn handle_let_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32) -> 
     Result::Ok(())
 }
 
-fn handle_round_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), Error> {
+fn handle_round_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), SyntaxError> {
     loop {
         match stack.pop() {
-            Option::None => return Result::Err(Error::SyntaxError),
+            Option::None => return Result::Err(SyntaxError{}),
             Option::Some(Token::RoundBracketOpen) => break,
             Option::Some(Token::Operator(op)) => {
-                let result: Result<(), Error> = push_operator_to_out(&op, out);
+                let result: Result<(), SyntaxError> = push_operator_to_out(&op, out);
                 match result {
                     Result::Ok(()) => (),
                     Result::Err(err) => return Result::Err(err)
                 };
             },
-            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(Error::SyntaxError),
+            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(SyntaxError{}),
             Option::Some(Token::RoundBracketClosed | Token::Operand(_) | Token::Let | Token::If | Token::Else) => panic!("This can never happer")
         }
     };
     Result::Ok(())
 }
 
-fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), Error> {
+fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp>) -> Result<(), SyntaxError> {
     loop {
         match stack.last() {
             Option::None => break,
@@ -201,14 +268,14 @@ fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Ex
                 if o2.precedence() > op.precedence() {
                     break;
                 } else {
-                    let result: Result<(), Error> = push_operator_to_out(o2, out);
+                    let result: Result<(), SyntaxError> = push_operator_to_out(o2, out);
                     match result {
                         Result::Ok(()) => stack.pop(),
                         Result::Err(err) => return Result::Err(err)
                     };
                 }
             },
-            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(Error::SyntaxError),
+            Option::Some(Token::CurlyBracketOpen | Token::CurlyBracketClosed) => return Result::Err(SyntaxError{}),
             Option::Some(Token::RoundBracketClosed | Token::Operand(_) | Token::Let | Token::If | Token::Else) => panic!("This can never happer")
         }
     }
@@ -216,91 +283,91 @@ fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Ex
     Result::Ok(())
 }
 
-fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), Error> {
+fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxError> {
     match op {
         Operator::Seq => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Seq(Box::new(o1), Box::new(o2)))
         },
         Operator::Assign => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (exp, var) = (out.pop().unwrap(), out.pop().unwrap());
             match var {
                 Exp::Var(var) => out.push(Exp::Assign(var, Box::new(exp))),
-                _ => return Result::Err(Error::SyntaxError)
+                _ => return Result::Err(SyntaxError{})
             }
         },
         Operator::Mul => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Mul(Box::new(o1), Box::new(o2)))
         },
         Operator::Div => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Div(Box::new(o1), Box::new(o2)))
         },
         Operator::Sum => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Sum(Box::new(o1), Box::new(o2)))
         },
         Operator::Sub => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Sub(Box::new(o1), Box::new(o2)))
         },
         Operator::Lt => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Lt(Box::new(o1), Box::new(o2)))
         },
         Operator::Gt => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Gt(Box::new(o1), Box::new(o2)))
         },
         Operator::Eq => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Eq(Box::new(o1), Box::new(o2)))
         },
         Operator::And => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::And(Box::new(o1), Box::new(o2)))
         },
         Operator::Or => {
             if out.len() < 2 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Or(Box::new(o1), Box::new(o2)))
         },
         Operator::Not => {
             if out.len() < 1 {
-                return Result::Err(Error::SyntaxError)
+                return Result::Err(SyntaxError{})
             }
             let o = out.pop().unwrap();
             out.push(Exp::Not(Box::new(o)))
