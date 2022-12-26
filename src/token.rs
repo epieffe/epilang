@@ -34,7 +34,7 @@ impl PartialEq for Token {
 
 
 pub enum Operand {
-    None,
+    Null,
     Int(i32),
     Bool(bool),
     Str(String),
@@ -44,7 +44,7 @@ pub enum Operand {
 impl Operand {
     pub fn to_exp(&self) -> Exp {
         match self {
-            Operand::None => Exp::Const(Const::None),
+            Operand::Null => Exp::Const(Const::None),
             Operand::Int(i) => Exp::Const(Const::Integer(*i)),
             Operand::Bool(b) => Exp::Const(Const::Boolean(*b)),
             Operand::Str(s) => Exp::Const(Const::String(s.clone())),

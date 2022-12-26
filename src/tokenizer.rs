@@ -7,6 +7,9 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
     let words = text.split_whitespace();
     for word in words {
         let token: Token = match word {
+            "true" => Token::Operand(Operand::Bool(true)),
+            "false" => Token::Operand(Operand::Bool(false)),
+            "null" => Token::Operand(Operand::Null),
             ";" => Token::Operator(Operator::Seq),
             "=" => Token::Operator(Operator::Assign),
             "&&" => Token::Operator(Operator::And),

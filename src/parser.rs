@@ -1,7 +1,6 @@
 use crate::expression::Exp;
 use crate::expression::Const;
 
-use crate::expression::Var;
 use crate::token::Token;
 use crate::token::Operator;
 
