@@ -19,7 +19,7 @@ pub enum Error {
 fn parse_tokens(
     tokens: &mut Vec<Token>,
     stop_tokens: Vec<Token>,
-    mut scope: u32,
+    scope: u32,
     stop_on_scope: Option<u32>,
 ) -> Result<(Exp, Option<Token>), Error> {
 
@@ -63,17 +63,16 @@ fn parse_tokens(
                 Result::Err(err) => return Result::Err(err)
             },
             Token::CurlyBracketOpen => {
-                let exp: Exp = match parse_tokens(tokens, vec![], scope + 1, Option::Some(scope)) {
+                let exp: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope, Option::None) {
                     Result::Ok((exp, _)) => exp,
                     Result::Err(err) => return Result::Err(err)
                 };
                 out.push(exp)
             }
             Token::CurlyBracketClosed => {
-                scope -= 1;
                 match stop_on_scope {
                     Option::None => (),
-                    Option::Some(s) => if s <= scope {
+                    Option::Some(s) => if s < scope {
                         break
                     }
                 }
@@ -118,7 +117,7 @@ fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32, stop
         Result::Err(e) => return Result::Err(e)
     };
 
-    let if_branch: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope + 1, Option::None) {
+    let if_branch: Exp = match parse_tokens(tokens, vec![Token::CurlyBracketClosed], scope, Option::None) {
         Result::Ok((exp, _)) => exp,
         Result::Err(e) => return Result::Err(e)
     };

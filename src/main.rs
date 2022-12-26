@@ -7,12 +7,8 @@ use tokenizer::tokenize;
 use parser::parse;
 
 use token::Token;
-use token::Operand;
-use token::Operator;
 
-use expression::Var;
 use expression::Const;
-use expression::Const::Integer;
 use expression::Exp;
 
 fn main() {
@@ -34,7 +30,18 @@ fn main() {
         Token::Operand(Operand::Int(2)),
     ];
     */
-    let p = "if true { { let y = 3 ; y = 4 } ; 4 } else { 4 } ; { let x ; x = 4 }";
+    let p = "
+    if true {
+        {
+            let y = 3 ;
+            y = 4
+        } ;
+        4
+    } else { 4 } ;
+    {
+        let x ;
+        x = 4
+    }";
     let mut tokens: Vec<Token> = tokenize(String::from(p))
         .expect("Errore tokens");
 
