@@ -7,6 +7,7 @@ pub enum Token {
     Operator(Operator),
     If,
     Else,
+    Let,
     RoundBracketOpen,
     RoundBracketClosed,
     CurlyBracketOpen,
@@ -16,12 +17,16 @@ pub enum Token {
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Token::Operator(Operator::Assign), Token::Operator(Operator::Assign)) => true,
+            (Token::Operator(Operator::Seq), Token::Operator(Operator::Seq)) => true,
+            (Token::CurlyBracketOpen, Token::CurlyBracketOpen) => true,
+            (Token::CurlyBracketClosed, Token::CurlyBracketClosed) => true,
             (Token::If, Token::If) => true,
             (Token::Else, Token::Else) => true,
             (Token::RoundBracketOpen, Token::RoundBracketOpen) => true,
             (Token::RoundBracketClosed, Token::RoundBracketClosed) => true,
-            (Token::CurlyBracketOpen, Token::CurlyBracketOpen) => true,
-            (Token::CurlyBracketClosed, Token::CurlyBracketClosed) => true,
+            (Token::Let, Token::Let) => true,
+            (Token::Operator(Operator::Eq), Token::Operator(Operator::Eq)) => true,
             _ => false
         }
     }

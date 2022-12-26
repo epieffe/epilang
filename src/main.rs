@@ -34,7 +34,7 @@ fn main() {
         Token::Operand(Operand::Int(2)),
     ];
     */
-    let p = "x = 5 ; if true { x = 4 ; 3 } else { 4 }";
+    let p = "if true { { let y = 3 ; y = 4 } ; 4 } else { 4 } ; { let x ; x = 4 }";
     let mut tokens: Vec<Token> = tokenize(String::from(p))
         .expect("Errore tokens");
 

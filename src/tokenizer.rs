@@ -19,6 +19,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             "-" => Token::Operator(Operator::Sub),
             "*" => Token::Operator(Operator::Mul),
             "/" => Token::Operator(Operator::Div),
+            "let" => Token::Let,
             "if" => Token::If,
             "else" => Token:: Else,
             "(" => Token::RoundBracketOpen,
