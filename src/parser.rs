@@ -66,14 +66,14 @@ fn parse_tokens(
                     Result::Ok((exp, _)) => exp,
                     Result::Err(err) => return Result::Err(err)
                 };
-                out.push(exp)
+                out.push(exp);
+                // its ok to omit seq (";") after curly brackets. We place it for you.
+                push_seq_if_not_present(tokens)
             }
             Token::CurlyBracketClosed => {
                 match stop_on_scope {
-                    Option::None => (),
-                    Option::Some(s) => if s < scope {
-                        break
-                    }
+                    Option::Some(s) if s < scope => break,
+                    _ => ()
                 }
             }
             Token::Else => return Result::Err(Error::SyntaxError)
@@ -136,6 +136,8 @@ fn handle_if_token(tokens: &mut Vec<Token>, out: &mut Vec<Exp>, scope: u32, stop
     };
 
     out.push(Exp::IfThenElse(Box::new(condition), Box::new(if_branch), Box::new(else_branch)));
+    // its ok to omit seq (";") after curly brackets. We place it for you.
+    push_seq_if_not_present(tokens);
     Result::Ok(())
 }
 
@@ -305,4 +307,14 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), Error> 
         },
     }
     Result::Ok(())
+}
+
+/**
+ *
+ */
+fn push_seq_if_not_present(tokens: &mut Vec<Token>) {
+    match tokens.last() {
+        Option::Some(Token::Operator(Operator::Seq)) | Option::None => (),
+        _ => tokens.push(Token::Operator(Operator::Seq))
+    }
 }

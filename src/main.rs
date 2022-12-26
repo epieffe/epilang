@@ -35,9 +35,10 @@ fn main() {
         {
             let y = 3 ;
             y = 4
-        } ;
-        4
-    } else { 4 } ;
+        }
+        4 ;
+        5
+    } else { 4 }
     {
         let x ;
         x = 4
