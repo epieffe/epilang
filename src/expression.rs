@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub enum Exp {
     // Eg: 1, False, None, "Hello"
     Const(Const),
@@ -44,4 +46,15 @@ pub enum Const {
     Boolean(bool),
     String(String),
     None
+}
+
+impl fmt::Display for Const {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Const::Integer(i) => write!(f, "{}", i),
+            Const::Boolean(b) => write!(f, "{}", b),
+            Const::String(s) => write!(f, "{}", s),
+            Const::None => write!(f, "unit")
+        }
+    }
 }
