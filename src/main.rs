@@ -25,6 +25,45 @@ use expression::Exp;
 use crate::semantics::eval_expression;
 
 fn main() {
+    run_text()
+}
+
+fn run_text() {
+    let mut stack: Vec<Const> = Vec::new();
+    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
+    let scope: usize = 0;
+
+    let text = String::from("if true {
+        let x = 3 ;
+        {
+            let y = 3 ;
+            y = 4
+        }
+        4 ;
+        x + 3
+    } else { 4 }");
+    let mut tokens: Vec<Token> = tokenize(text).unwrap_or_else(|err| {
+        panic!("TokenizerError")
+    });
+
+    // Parse tokens to exp
+    let exp: Exp = parse_in_scope(&mut tokens, scope, &mut variable_scope_map).unwrap_or_else(|err| {
+        panic!("ParserError")
+    });
+
+    println!("{}", exp_to_string(&exp));
+    println!("########");
+
+    // Evaluate expression
+    let val: Const = eval_expression(exp, &mut stack).unwrap_or_else(|err| {
+        panic!("RuntimeError: {}", err.msg)
+    });
+
+    println!("Result: {}", const_to_string(&val));
+
+}
+
+fn interactive_shell() {
     let mut stack: Vec<Const> = Vec::new();
     let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
     let mut scope = 0;

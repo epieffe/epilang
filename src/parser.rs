@@ -173,7 +173,8 @@ fn handle_if_token(
             tokens.pop();
             match tokens.pop() {
                 Option::Some(Token::CurlyBracketOpen) => match parse_tokens(
-                    tokens, scope,
+                    tokens,
+                    scope,
                     variable_scope_map,
                     vec![Token::CurlyBracketClosed],
                     stop_on_scope
@@ -225,8 +226,11 @@ fn handle_let_token(
         _ => return Result::Err(SyntaxError {})
     };
 
-    // Add this variable to the scope
-    variable_scope_map.insert(var.name.to_string(), scope);
+    // Store an eventually shadowed var
+    let shadowed_var: Option<usize> = variable_scope_map.get(&var.name).map(|scop| { *scop });
+
+    // Push this variable to the scope
+    variable_scope_map.insert(var.name.clone(), scope);
 
     // Parse until this scope closure
     let exp: Exp = match parse_tokens(
@@ -247,6 +251,14 @@ fn handle_let_token(
         }
         Result::Err(err) => return Result::Err(err)
     };
+
+    // Pop variable from scope and eventually restore shadowed variable
+    match shadowed_var {
+        Option::Some(scop) => variable_scope_map.insert(var.name.clone(), scop),
+        Option::None => variable_scope_map.remove(&var.name)
+    };
+
+    // Push expression to the output queue
     out.push(Exp::Decl(var, Box::new(value), Box::new(exp)));
     Result::Ok(())
 }
