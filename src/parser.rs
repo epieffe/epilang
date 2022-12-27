@@ -18,6 +18,17 @@ pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, SyntaxError>  {
     }
 }
 
+pub fn parse_in_scope(
+    tokens: &mut Vec<Token>,
+    scope: usize,
+    variable_scope_map: &mut HashMap<String, usize>,
+) -> Result<Exp, SyntaxError> {
+    match parse_tokens(tokens, scope, variable_scope_map, vec![], Option::None) {
+        Result::Ok((exp, _)) => Result::Ok(exp),
+        Result::Err(err) => Result::Err(err)
+    }
+}
+
 fn parse_tokens(
     tokens: &mut Vec<Token>,
     scope: usize,
@@ -191,7 +202,7 @@ fn handle_let_token(
 
     // Parse variable after the let token
     let var: Var = match tokens.pop() {
-        Option::Some(Token::Operand(Operand::Var(name))) => (Var{name: name, scope: scope}),
+        Option::Some(Token::Operand(Operand::Var(name))) => Var{name: name, scope: scope},
         _ => return Result::Err(SyntaxError{})
     };
 

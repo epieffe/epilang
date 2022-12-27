@@ -19,7 +19,7 @@ pub fn eval(exp: Exp) -> Result<Const, Error> {
     eval_expression(exp, &mut stack)
 }
 
-fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error> {
+pub fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error> {
     match exp {
         Exp::Const(c) => Result::Ok(c),
 
@@ -188,9 +188,9 @@ fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error> {
                 Result::Ok(val) => val,
                 Result::Err(err) => return Result::Err(err)
             };
-            match (val) {
+            match val {
                 Boolean(val) => Result::Ok(Boolean(!val)),
-                (v) => return Result::Err(Error{
+                v => return Result::Err(Error{
                     msg: format!("Unsupported && operator for value {}", v)
                 })
             }
