@@ -309,11 +309,10 @@ fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Ex
 fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxError> {
     match op {
         Operator::Seq => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
-            let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
-            out.push(Exp::Seq(Box::new(o1), Box::new(o2)))
+            if out.is_empty() { return Result::Err(SyntaxError{}) }
+            let exp2: Exp = out.pop().unwrap();
+            let exp1: Exp = out.pop().unwrap_or(Exp::Const(Const::None));
+            out.push(Exp::Seq(Box::new(exp1), Box::new(exp2)))
         },
         Operator::Assign => {
             if out.len() < 2 {

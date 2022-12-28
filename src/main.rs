@@ -25,7 +25,7 @@ use expression::Exp;
 use crate::semantics::eval_expression;
 
 fn main() {
-    run_text()
+    interactive_shell()
 }
 
 fn run_text() {
