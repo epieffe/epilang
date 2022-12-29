@@ -1,13 +1,13 @@
 mod expression;
 mod token;
 mod parser;
-mod tokenizer;
+mod lexer;
 mod semantics;
 mod shell;
 
 use std::collections::HashMap;
 
-use tokenizer::tokenize;
+use lexer::tokenize;
 use parser::parse_in_scope;
 
 use token::Token;

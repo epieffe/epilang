@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rustyline::error::ReadlineError;
 use rustyline::{Editor};
 
-use crate::tokenizer::tokenize;
+use crate::lexer::tokenize;
 use crate::parser::parse_in_scope;
 use crate::semantics::eval_expression;
 
