@@ -43,6 +43,7 @@ pub struct Var {
 }
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub enum Const {
     Integer(i32),
     Boolean(bool),
@@ -57,6 +58,18 @@ impl fmt::Display for Const {
             Const::Boolean(b) => write!(f, "{}", b),
             Const::String(s) => write!(f, "{}", s),
             Const::None => write!(f, "unit")
+        }
+    }
+}
+
+impl PartialEq for Const {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Const::Integer(i1), Const::Integer(i2)) => i1 == i2,
+            (Const::Boolean(b1), Const::Boolean(b2)) => b1 == b2,
+            (Const::String(s1), Const::String(s2)) => s1 == s2,
+            (Const::None, Const::None) => true,
+            _ => false
         }
     }
 }
