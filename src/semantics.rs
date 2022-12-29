@@ -157,6 +157,20 @@ pub fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error>
             }
         },
 
+        Exp::Neq(exp1, exp2) => {
+            let (val1, val2) = match double_eval(*exp1, *exp2, stack) {
+                Result::Ok(values) => values,
+                Result::Err(err) => return Result::Err(err)
+            };
+            match (val1, val2) {
+                (Integer(i1), Integer(i2)) => Result::Ok(Boolean(i1 != i2)),
+                (Boolean(b1), Boolean(b2)) => Result::Ok(Boolean(b1 != b2)),
+                (v1, v2) => return Result::Err(Error{
+                    msg: format!("Unsupported != operator for values {}, {}", v1, v2)
+                })
+            }
+        },
+
         Exp::And(exp1, exp2) => {
             let (val1, val2) = match double_eval(*exp1, *exp2, stack) {
                 Result::Ok(values) => values,
@@ -191,7 +205,7 @@ pub fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error>
             match val {
                 Boolean(val) => Result::Ok(Boolean(!val)),
                 v => return Result::Err(Error{
-                    msg: format!("Unsupported && operator for value {}", v)
+                    msg: format!("Unsupported ! operator for value {}", v)
                 })
             }
         }

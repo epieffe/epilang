@@ -16,6 +16,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             "||" => Token::Operator(Operator::Or),
             "!" => Token::Operator(Operator::Not),
             "==" => Token::Operator(Operator::Eq),
+            "!=" => Token::Operator(Operator::Neq),
             "<" => Token::Operator(Operator::Lt),
             ">" => Token::Operator(Operator::Gt),
             "+" => Token::Operator(Operator::Sum),

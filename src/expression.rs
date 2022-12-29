@@ -5,33 +5,35 @@ pub enum Exp {
     Const(Const),
     // Eg: x, y, z
     Var(Var),
-    // Eg: let x = y
+    // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
-    // Eg: x = 3
+    // Eg: x = exp
     Assign(Var, Box<Exp>),
-    // Eg: x; y
+    // Eg: exp1; exp2
     Seq(Box<Exp>, Box<Exp>),
-    // Eg: x + y
+    // Eg: exp1 + exp2
     Sum(Box<Exp>, Box<Exp>),
-    // Eg: x - y
+    // Eg: exp1 - exp2
     Sub(Box<Exp>, Box<Exp>),
-    // Eg: x * y
+    // Eg: exp1 * exp2
     Mul(Box<Exp>, Box<Exp>),
-    // Eg: x / y
+    // Eg: exp1 / exp2
     Div(Box<Exp>, Box<Exp>),
-    // Eg: x < y
+    // Eg: exp1 < exp2
     Lt(Box<Exp>, Box<Exp>),
-    // Eg: x > y
+    // Eg: exp1 > exp2
     Gt(Box<Exp>, Box<Exp>),
-    // Eg: x == y
+    // Eg: exp1 == exp2
     Eq(Box<Exp>, Box<Exp>),
-    // Eg: x && y
+    // Eg: exp1 != exp2
+    Neq(Box<Exp>, Box<Exp>),
+    // Eg: exp1 && exp2
     And(Box<Exp>, Box<Exp>),
-    // Eg: x || y
+    // Eg: exp1 || exp2
     Or(Box<Exp>, Box<Exp>),
-    // Eg: !x
+    // Eg: !exp
     Not(Box<Exp>),
-    // If then else. Eg: if e {e1} else {e2}
+    // If then else. Eg: if exp {exp1} else {exp2}
     IfThenElse(Box<Exp>, Box<Exp>, Box<Exp>)
 }
 

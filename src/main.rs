@@ -40,7 +40,8 @@ fn run_text() {
             y = 4
         }
         4 ;
-        x + 3
+        x + 3 ;
+        ! ! ( x == 3 )
     } else { 4 }");
     let mut tokens: Vec<Token> = tokenize(text).unwrap_or_else(|err| {
         panic!("TokenizerError")
@@ -86,6 +87,8 @@ fn interactive_shell() {
                 continue
             }
         };
+        if tokens.is_empty() { continue }
+
         // We need to handle let expression separately when in interactive mode
         let is_let: bool = match tokens.last() {
             Option::Some(Token::Let) => true,
@@ -168,7 +171,7 @@ fn const_to_string(c: &Const) -> String {
 fn exp_to_string(exp: &Exp) -> String {
     match exp {
         Exp::Const(c) => const_to_string(c),
-        Exp::Var(x) => x.scope.to_string(),
+        Exp::Var(x) => format!("x{}", x.scope.to_string()),
         Exp::Decl(x, val, e) => format!("let x{} = {};\n{}", x.scope, exp_to_string(val), exp_to_string(e)),
         Exp::Assign(x, e) => format!("x{} = {}", x.scope, exp_to_string(e)),
         Exp::Seq(e1, e2) => format!("{};\n {}", exp_to_string(e1), exp_to_string(e2)),
@@ -179,6 +182,7 @@ fn exp_to_string(exp: &Exp) -> String {
         Exp::Lt(e1, e2) => format!("{} < {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Gt(e1, e2) => format!("{} > {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Eq(e1, e2) => format!("{} == {}", exp_to_string(e1), exp_to_string(e2)),
+        Exp::Neq(e1, e2) => format!("{} != {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::And(e1, e2) => format!("{} && {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Or(e1, e2) => format!("{} || {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Not(e) => format!("!{}", exp_to_string(e)),

@@ -288,11 +288,10 @@ fn handle_operator_token(op: &Operator, stack: &mut Vec<Token>, out: &mut Vec<Ex
             Option::None => break,
             Option::Some(Token::RoundBracketOpen) => break,
             Option::Some(Token::Operator(o2)) => {
-                if o2.precedence() > op.precedence() {
-                    break;
+                if o2.precedence() >= op.precedence() {
+                    break
                 } else {
-                    let result: Result<(), SyntaxError> = push_operator_to_out(o2, out);
-                    match result {
+                    match push_operator_to_out(o2, out) {
                         Result::Ok(()) => stack.pop(),
                         Result::Err(err) => return Result::Err(err)
                     };
@@ -315,9 +314,7 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxE
             out.push(Exp::Seq(Box::new(exp1), Box::new(exp2)))
         },
         Operator::Assign => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (exp, var) = (out.pop().unwrap(), out.pop().unwrap());
             match var {
                 Exp::Var(var) => out.push(Exp::Assign(var, Box::new(exp))),
@@ -325,72 +322,57 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxE
             }
         },
         Operator::Mul => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Mul(Box::new(o1), Box::new(o2)))
         },
         Operator::Div => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Div(Box::new(o1), Box::new(o2)))
         },
         Operator::Sum => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Sum(Box::new(o1), Box::new(o2)))
         },
         Operator::Sub => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Sub(Box::new(o1), Box::new(o2)))
         },
         Operator::Lt => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Lt(Box::new(o1), Box::new(o2)))
         },
         Operator::Gt => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Gt(Box::new(o1), Box::new(o2)))
         },
         Operator::Eq => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Eq(Box::new(o1), Box::new(o2)))
         },
+        Operator::Neq => {
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
+            let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
+            out.push(Exp::Neq(Box::new(o1), Box::new(o2)))
+        },
         Operator::And => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::And(Box::new(o1), Box::new(o2)))
         },
         Operator::Or => {
-            if out.len() < 2 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 2 { return Result::Err(SyntaxError{}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Or(Box::new(o1), Box::new(o2)))
         },
         Operator::Not => {
-            if out.len() < 1 {
-                return Result::Err(SyntaxError{})
-            }
+            if out.len() < 1 { return Result::Err(SyntaxError{}) }
             let o = out.pop().unwrap();
             out.push(Exp::Not(Box::new(o)))
         },
