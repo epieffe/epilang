@@ -4,7 +4,7 @@ use rustyline::error::ReadlineError;
 use rustyline::{Editor};
 
 use crate::tokenizer::tokenize;
-use crate::parser::parse_in_scope;
+use crate::parser::parse_tokens;
 use crate::semantics::eval_expression;
 
 use crate::expression::Exp;
@@ -17,8 +17,8 @@ use crate::token::Operator;
 
 pub fn run_shell() {
     let mut stack: Vec<Const> = Vec::new();
-    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
-    let mut scope = 0;
+    let mut variable_scope_map: HashMap<String, Var> = HashMap::new();
+    let scope = 0;
 
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
     loop {
@@ -51,7 +51,7 @@ fn handle_user_input(
     line: String,
     stack: &mut Vec<Const>,
     mut scope: usize,
-    variable_scope_map: &mut HashMap<String, usize>
+    variable_scope_map: &mut HashMap<String, Var>
 ) -> usize {
     // Tokenize string
     let mut tokens: Vec<Token> = match tokenize(line) {
@@ -77,7 +77,7 @@ fn handle_user_input(
         return scope;
     }
     // Parse tokens to exp
-    let exp: Exp = match parse_in_scope(&mut tokens, scope, variable_scope_map) {
+    let exp: Exp = match parse_tokens(&mut tokens, scope, variable_scope_map) {
         Result::Ok(exp) => exp,
         Result::Err(_) => {
             println!("Syntax error");
@@ -103,7 +103,7 @@ fn eval_let(
     tokens: &mut Vec<Token>,
     stack: &mut Vec<Const>,
     scope: usize,
-    variable_scope_map: &mut HashMap<String, usize>
+    variable_scope_map: &mut HashMap<String, Var>
 ) -> Result<usize, String> {
     // Pop let token
     match tokens.pop() {
@@ -122,15 +122,15 @@ fn eval_let(
         _ => return Result::Err(String::from("SyntaxError: expected '=' token"))
     };
 
-    let exp: Exp = match parse_in_scope(tokens, scope, variable_scope_map) {
+    let exp: Exp = match parse_tokens(tokens, scope, variable_scope_map) {
         Result::Ok(exp) => exp,
-        Result::Err(err) => return Result::Err(String::from("SyntaxError"))
+        Result::Err(err) => return Result::Err(String::from(format!("SyntaxError: {}", err.msg)))
     };
     let val = match eval_expression(exp, stack) {
         Result::Ok(val) => val,
         Result::Err(err) => return Result::Err(err.msg)
     };
-    variable_scope_map.insert(var_name, scope);
+    variable_scope_map.insert(var_name.clone(), Var{name: var_name, scope: scope});
     stack.push(val);
     Result::Ok(scope + 1)
 }

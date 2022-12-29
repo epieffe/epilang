@@ -5,10 +5,9 @@ mod tokenizer;
 mod semantics;
 mod shell;
 
-use std::collections::HashMap;
+use parser::parse;
 
 use tokenizer::tokenize;
-use parser::parse_in_scope;
 
 use token::Token;
 
@@ -29,7 +28,6 @@ fn main() {
 
 fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
-    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
     let scope: usize = 0;
 
     let text = String::from("if true {
@@ -47,8 +45,8 @@ fn run_text() {
     });
 
     // Parse tokens to exp
-    let exp: Exp = parse_in_scope(&mut tokens, scope, &mut variable_scope_map).unwrap_or_else(|err| {
-        panic!("ParserError")
+    let exp: Exp = parse(&mut tokens).unwrap_or_else(|err| {
+        panic!("ParserError: {}", err.msg)
     });
 
     println!("{}", exp_to_string(&exp));
