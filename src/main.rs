@@ -183,8 +183,8 @@ mod tests {
         assert_eq!(eval_program(String::from("1 != 2")), Result::Ok(Const::Boolean(true)));
         assert_eq!(eval_program(String::from("2 * 2 != 2 + 2 / 2 + 1")), Result::Ok(Const::Boolean(false)));
         assert_eq!(eval_program(String::from("! 3 == 3")), Result::Ok(Const::Boolean(false)));
-        //assert_eq!(eval_program(String::from("( ! 3 == 3 ) == ( 3 != 3 )")), Result::Ok(Const::Boolean(true)));
-        //assert_eq!(eval_program(String::from("( ! 3 != 3 ) == ( 3 == 3 )")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("( ! 3 == 3 ) == ( 3 != 3 )")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("( ! 3 != 3 ) == ( 3 == 3 )")), Result::Ok(Const::Boolean(true)));
     }
 
     #[test]
