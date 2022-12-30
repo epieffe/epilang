@@ -27,6 +27,7 @@ pub fn make_token(word: &String) -> Result<Token, ()> {
         ")" => Token::RoundBracketClosed,
         "{" => Token::CurlyBracketOpen,
         "}" => Token::CurlyBracketClosed,
+        "," => Token::Comma,
         s => match s.parse::<i32>() {
             Result::Ok(i) => Token::Operand(Operand::Int(i)),
             Result::Err(_) => Token::Operand(Operand::Var(String::from(s)))

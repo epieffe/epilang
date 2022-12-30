@@ -11,7 +11,7 @@ use lexer::tokenize;
 
 use token::Token;
 
-use expression::Const;
+use expression::{Const, Var};
 use expression::Exp;
 
 use crate::semantics::eval_expression;
@@ -19,7 +19,7 @@ use crate::semantics::eval_expression;
 fn main() {
     let mode = "SHELL";
 
-    if mode == "SHELL" {
+    if mode == "SHELLa" {
         shell::run_shell()
     } else {
         run_text()
@@ -30,16 +30,23 @@ fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
     let scope: usize = 0;
 
+    let text = "3 ( 3 , 4 + 4 )";
+
+    //let text = "let x = 0 ; let y = 0 ; if ( x == 0 ) { y = 1 } else { y = 2 } ; y";
+
     let text = String::from("if true {
         let x = 3 ;
         {
             let y = 3 ;
-            y = 4
+            y = 4 ;
+            x ( y , 3 , y ( 4 ) , 4 + 4 )
         }
         4 ;
         x + 3 ;
         ! ! ( x == 3 )
     } else { 4 }");
+
+    let text = String::from(text);
     let mut tokens: Vec<Token> = tokenize(text).unwrap_or_else(|err| {
         panic!("TokenizerError")
     });
@@ -53,11 +60,11 @@ fn run_text() {
     println!("########");
 
     // Evaluate expression
-    let val: Const = eval_expression(exp, &mut stack).unwrap_or_else(|err| {
-        panic!("RuntimeError: {}", err.msg)
-    });
+    // let val: Const = eval_expression(exp, &mut stack).unwrap_or_else(|err| {
+    //     panic!("RuntimeError: {}", err.msg)
+    // });
 
-    println!("Result: {}", const_to_string(&val));
+    // println!("Result: {}", const_to_string(&val));
 
 }
 
@@ -70,13 +77,27 @@ fn const_to_string(c: &Const) -> String {
     }
 }
 
-fn exp_to_string(exp: &Exp) -> String {
+fn var_to_string(var: &Var) -> String {
+    format!("{}_{}", var.name, var.scope)
+}
+
+fn vars_to_string(vars: &Vec<Var>) -> String {
+    format!("{}", vars.iter().map(|var| {var_to_string(var)}).collect::<String>())
+}
+
+pub fn exp_to_string(exp: &Exp) -> String {
     match exp {
         Exp::Const(c) => const_to_string(c),
-        Exp::Var(x) => format!("x{}", x.scope.to_string()),
-        Exp::Decl(x, val, e) => format!("let x{} = {};\n{}", x.scope, exp_to_string(val), exp_to_string(e)),
-        Exp::Assign(x, e) => format!("x{} = {}", x.scope, exp_to_string(e)),
-        Exp::Seq(e1, e2) => format!("{};\n {}", exp_to_string(e1), exp_to_string(e2)),
+        Exp::Var(x) => var_to_string(x),
+        Exp::Decl(x, val, scope) => format!("let {} = {};\n{}", var_to_string(x), exp_to_string(val), exp_to_string(scope)),
+        Exp::FunctionDecl(f, args, body, scope) => format!("fn f{}({}){{\n{}\n}};\n{}",
+            f.scope,
+            vars_to_string(args),
+            exp_to_string(body),
+            exp_to_string(scope)
+        ),
+        Exp::Assign(x, e) => format!("{} = {}", var_to_string(x), exp_to_string(e)),
+        Exp::Seq(e1, e2) => format!("{};\n{}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Sum(e1, e2) => format!("{} + {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Sub(e1, e2) => format!("{} - {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Mul(e1, e2) => format!("{} * {}", exp_to_string(e1), exp_to_string(e2)),
@@ -88,18 +109,21 @@ fn exp_to_string(exp: &Exp) -> String {
         Exp::And(e1, e2) => format!("{} && {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Or(e1, e2) => format!("{} || {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Not(e) => format!("!{}", exp_to_string(e)),
-        Exp::IfThenElse(e, e1, e2) => format!("if {} {{ {} }} else {{ {} }}", exp_to_string(e), exp_to_string(e1), exp_to_string(e2))
+        Exp::IfThenElse(e, e1, e2) => format!("if {} {{ {} }} else {{ {} }}", exp_to_string(e), exp_to_string(e1), exp_to_string(e2)),
+        Exp::FunctionCall(e, args) => format!("{}({})", exp_to_string(e), args_to_string(args))
     }
 }
 
-
-
-
-
+fn args_to_string(args: &Vec<Exp>) -> String {
+    args.iter().map(|exp| {exp_to_string(exp)}).reduce(|mut a, b| {
+        a.push_str(&format!(", {}", b));
+        return a;
+    })
+    .unwrap_or(String::from(" "))
+}
 
 
 // ###################################### TEST ###########################################################
-
 
 #[cfg(test)]
 mod tests {

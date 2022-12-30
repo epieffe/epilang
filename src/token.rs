@@ -12,8 +12,28 @@ pub enum Token {
     RoundBracketClosed,
     CurlyBracketOpen,
     CurlyBracketClosed,
-    // End of file
-    EOF
+    Comma
+}
+
+impl Token {
+    /**
+     * If a token is callable, then a `(` token right after it
+     * is interpreted as the beginning of a function call
+     */
+    pub fn is_callable(&self) -> bool {
+        match self {
+            Token::Operand(_) => true,
+            Token::RoundBracketClosed => true,
+            Token::Operator(_) => false,
+            Token::If => false,
+            Token::Else => false,
+            Token::Let => false,
+            Token::RoundBracketOpen => false,
+            Token::CurlyBracketOpen => false,
+            Token::CurlyBracketClosed => false,
+            Token::Comma => false,
+        }
+    }
 }
 
 impl PartialEq for Token {

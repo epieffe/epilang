@@ -56,6 +56,9 @@ pub fn eval_expression(exp: Exp, stack: &mut Vec<Const>) -> Result<Const, Error>
             eval_expression(branch, stack)
         }
 
+        Exp::FunctionCall(callable, args) => panic!("Not implemented TODO"),
+        Exp::FunctionDecl(var, args, body, scope) => panic!("Not implemented TODO"),
+
         Exp::Seq(exp1, exp2) => {
             match eval_expression(*exp1, stack) {
                 Result::Ok(_) => (),

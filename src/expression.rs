@@ -7,6 +7,12 @@ pub enum Exp {
     Var(Var),
     // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
+    // Function declaration. Eg: fn my_func(arg_1, .. arg_n) { body } exp
+    FunctionDecl(Var, Vec<Var>, Box<Exp>, Box<Exp>),
+    // If then else. Eg: if exp {exp1} else {exp2}
+    IfThenElse(Box<Exp>, Box<Exp>, Box<Exp>),
+    // Function call. Eg: exp(arg_1, ... , arg_n)
+    FunctionCall(Box<Exp>, Vec<Exp>),
     // Eg: x = exp
     Assign(Var, Box<Exp>),
     // Eg: exp1; exp2
@@ -32,9 +38,7 @@ pub enum Exp {
     // Eg: exp1 || exp2
     Or(Box<Exp>, Box<Exp>),
     // Eg: !exp
-    Not(Box<Exp>),
-    // If then else. Eg: if exp {exp1} else {exp2}
-    IfThenElse(Box<Exp>, Box<Exp>, Box<Exp>)
+    Not(Box<Exp>)
 }
 
 pub struct Var {
