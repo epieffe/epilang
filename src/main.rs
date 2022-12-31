@@ -4,6 +4,7 @@ mod parser;
 mod lexer;
 mod semantics;
 mod shell;
+mod value;
 
 use parser::parse;
 
@@ -14,7 +15,8 @@ use token::Token;
 use expression::{Const, Var};
 use expression::Exp;
 
-use crate::semantics::eval_expression;
+use semantics::eval;
+use value::{Value};
 
 fn main() {
     let mode = "SHELL";
@@ -30,21 +32,21 @@ fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
     let scope: usize = 0;
 
-    let text = "3 ( 3 , 4 + 4 )";
+    let text = "let x = 3 ; let y = 4 ; x + y + 2";
 
     //let text = "let x = 0 ; let y = 0 ; if ( x == 0 ) { y = 1 } else { y = 2 } ; y";
 
-    let text = String::from("if true {
-        let x = 3 ;
-        {
-            let y = 3 ;
-            y = 4 ;
-            x ( y , 3 , y ( 4 ) , 4 + 4 )
-        }
-        4 ;
-        x + 3 ;
-        ! ! ( x == 3 )
-    } else { 4 }");
+    // let text = String::from("if true {
+    //     let x = 3 ;
+    //     {
+    //         let y = 3 ;
+    //         y = 4 ;
+    //         x ( y , 3 , y ( 4 ) , 4 + 4 )
+    //     }
+    //     4 ;
+    //     x + 3 ;
+    //     ! ! ( x == 3 )
+    // } else { 4 }");
 
     let text = String::from(text);
     let mut tokens: Vec<Token> = tokenize(text).unwrap_or_else(|err| {
@@ -60,11 +62,11 @@ fn run_text() {
     println!("########");
 
     // Evaluate expression
-    // let val: Const = eval_expression(exp, &mut stack).unwrap_or_else(|err| {
-    //     panic!("RuntimeError: {}", err.msg)
-    // });
+    let val: Value = eval(exp).unwrap_or_else(|err| {
+        panic!("RuntimeError: {}", err.msg)
+    });
 
-    // println!("Result: {}", const_to_string(&val));
+    println!("Result: {}", val);
 
 }
 

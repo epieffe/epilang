@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Debug)]
 pub enum Exp {
     // Eg: 1, False, None, "Hello"
     Const(Const),
@@ -41,13 +42,13 @@ pub enum Exp {
     Not(Box<Exp>)
 }
 
+#[derive(Debug)]
 pub struct Var {
     pub name: String,
     pub scope: usize
 }
 
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Const {
     Integer(i32),
     Boolean(bool),

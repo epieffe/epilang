@@ -6,6 +6,7 @@ use rustyline::{Editor};
 use crate::lexer::tokenize;
 use crate::parser::parse_tokens;
 use crate::semantics::eval_expression;
+use crate::value::{Value, StackValue};
 
 use crate::expression::Exp;
 use crate::expression::Const;
@@ -16,7 +17,7 @@ use crate::token::Operand;
 use crate::token::Operator;
 
 pub fn run_shell() {
-    let mut stack: Vec<Const> = Vec::new();
+    let mut stack: Vec<StackValue> = Vec::new();
     let mut variable_scope_map: HashMap<String, Var> = HashMap::new();
     let scope = 0;
 
@@ -49,7 +50,7 @@ pub fn run_shell() {
  */
 fn handle_user_input(
     line: String,
-    stack: &mut Vec<Const>,
+    stack: &mut Vec<StackValue>,
     mut scope: usize,
     variable_scope_map: &mut HashMap<String, Var>
 ) -> usize {
@@ -86,7 +87,7 @@ fn handle_user_input(
     };
     // Evaluate expression
     match eval_expression(exp, stack) {
-        Result::Ok(Const::None) => (),
+        Result::Ok(Value::Unit) => (),
         Result::Ok(val) => {
             println!("{}", val);
         },
@@ -101,7 +102,7 @@ fn handle_user_input(
  */
 fn eval_let(
     tokens: &mut Vec<Token>,
-    stack: &mut Vec<Const>,
+    stack: &mut Vec<StackValue>,
     scope: usize,
     variable_scope_map: &mut HashMap<String, Var>
 ) -> Result<usize, String> {
@@ -131,6 +132,6 @@ fn eval_let(
         Result::Err(err) => return Result::Err(err.msg)
     };
     variable_scope_map.insert(var_name.clone(), Var{name: var_name, scope: scope});
-    stack.push(val);
+    //stack.push(*val);
     Result::Ok(scope + 1)
 }
