@@ -1,6 +1,6 @@
-use crate::expression::Exp;
-use crate::expression::Const;
-use crate::expression::Var;
+use std::fmt;
+
+use crate::expression::{Const, Exp};
 
 pub enum Token {
     Operand(Operand),
@@ -12,6 +12,8 @@ pub enum Token {
     RoundBracketClosed,
     CurlyBracketOpen,
     CurlyBracketClosed,
+    // End of file
+    EOF
 }
 
 impl PartialEq for Token {
@@ -26,6 +28,7 @@ impl PartialEq for Token {
             (Token::RoundBracketOpen, Token::RoundBracketOpen) => true,
             (Token::RoundBracketClosed, Token::RoundBracketClosed) => true,
             (Token::Let, Token::Let) => true,
+            (Token::Operand(Operand::Null), Token::Operand(Operand::Null)) => true,
             (Token::Operator(Operator::Eq), Token::Operator(Operator::Eq)) => true,
             _ => false
         }
@@ -86,6 +89,26 @@ impl Operator {
             Operator::Or => 6,
             Operator::Assign => 7,
             Operator::Seq => 8,
+        }
+    }
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operator::Mul => write!(f, "{}","*"),
+            Operator::Div => write!(f, "{}","/"),
+            Operator::Sum => write!(f, "{}","+"),
+            Operator::Sub => write!(f, "{}","-"),
+            Operator::Not => write!(f, "{}","!"),
+            Operator::Lt => write!(f, "{}","<"),
+            Operator::Gt => write!(f, "{}",">"),
+            Operator::Eq => write!(f, "{}","=="),
+            Operator::Neq => write!(f, "{}","!="),
+            Operator::And => write!(f, "{}","&&"),
+            Operator::Or => write!(f, "{}","||"),
+            Operator::Assign => write!(f, "{}","="),
+            Operator::Seq => write!(f, "{}",";")
         }
     }
 }

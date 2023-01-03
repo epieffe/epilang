@@ -5,10 +5,9 @@ mod lexer;
 mod semantics;
 mod shell;
 
-use std::collections::HashMap;
+use parser::parse;
 
 use lexer::tokenize;
-use parser::parse_in_scope;
 
 use token::Token;
 
@@ -29,7 +28,6 @@ fn main() {
 
 fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
-    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
     let scope: usize = 0;
 
     let text = String::from("if true {
@@ -47,8 +45,8 @@ fn run_text() {
     });
 
     // Parse tokens to exp
-    let exp: Exp = parse_in_scope(&mut tokens, scope, &mut variable_scope_map).unwrap_or_else(|err| {
-        panic!("ParserError")
+    let exp: Exp = parse(&mut tokens).unwrap_or_else(|err| {
+        panic!("ParserError: {}", err.msg)
     });
 
     println!("{}", exp_to_string(&exp));
@@ -105,19 +103,22 @@ fn exp_to_string(exp: &Exp) -> String {
 
 #[cfg(test)]
 mod tests {
+    use parser::parse_tokens;
+    use std::collections::HashMap;
+    use crate::expression::Var;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
     fn eval_program(text: String) -> Result<Const, ()> {
         let mut stack: Vec<Const> = Vec::new();
-        let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
+        let mut variable_scope_map: HashMap<String, Var> = HashMap::new();
         let scope: usize = 0;
     
         let mut tokens: Vec<Token> = tokenize(text)?;
     
         // Parse tokens to exp
-        let exp: Exp = parse_in_scope(&mut tokens, scope, &mut variable_scope_map).or(Result::Err(()))?;
+        let exp: Exp = parse_tokens(&mut tokens, scope, &mut variable_scope_map).or(Result::Err(()))?;
     
         // Evaluate expression
         let val: Const = eval_expression(exp, &mut stack).or(Result::Err(()))?;
@@ -189,14 +190,14 @@ mod tests {
 
     #[test]
     fn test6() {
-        assert_eq!(eval_program(String::from("let x = 0 ; let y = 0 ; if x == 0 { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(1)));
-        assert_eq!(eval_program(String::from("let x = 1 ; let y = 0 ; if x == 0 { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(2)));
+        assert_eq!(eval_program(String::from("let x = 0 ; let y = 0 ; if (x == 0) { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(1)));
+        assert_eq!(eval_program(String::from("let x = 1 ; let y = 0 ; if (x == 0) { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(2)));
         
         let text1 = String::from("
             let x = 0 ;
             let y = 0 ;
-            if x == 0 {
-                if y == 0 {
+            if (x == 0) {
+                if (y == 0) {
                     0 ; 
                 }
                 else {
@@ -212,8 +213,8 @@ mod tests {
         let text2 = String::from("
             let x = 0 ;
             let y = 1 ;
-            if x == 0 {
-                if y == 0 {
+            if (x == 0) {
+                if (y == 0) {
                     0 ; 
                 }
                 else {
@@ -229,8 +230,8 @@ mod tests {
         let text3 = String::from("
             let x = 1 ;
             let y = 0 ;
-            if x == 0 {
-                if y == 0 {
+            if (x == 0) {
+                if (y == 0) {
                     0 ; 
                 }
                 else {
