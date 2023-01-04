@@ -1,5 +1,6 @@
 use std::fmt;
 use std::ptr;
+use std::thread;
 
 use crate::expression::Exp;
 use crate::expression::Const;
@@ -51,7 +52,7 @@ pub enum Value {
     Unit,
     Int(isize),
     Bool(bool),
-    Fn(Box<Function>),
+    Fn(Function),
     Str(String),
 }
 

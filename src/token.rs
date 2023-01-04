@@ -8,6 +8,7 @@ pub enum Token {
     If,
     Else,
     Let,
+    Fn,
     RoundBracketOpen,
     RoundBracketClosed,
     CurlyBracketOpen,
@@ -28,6 +29,7 @@ impl Token {
             Token::If => false,
             Token::Else => false,
             Token::Let => false,
+            Token::Fn => false,
             Token::RoundBracketOpen => false,
             Token::CurlyBracketOpen => false,
             Token::CurlyBracketClosed => false,
@@ -48,6 +50,7 @@ impl PartialEq for Token {
             (Token::RoundBracketOpen, Token::RoundBracketOpen) => true,
             (Token::RoundBracketClosed, Token::RoundBracketClosed) => true,
             (Token::Let, Token::Let) => true,
+            (Token::Fn, Token::Fn) => true,
             (Token::Operand(Operand::Null), Token::Operand(Operand::Null)) => true,
             (Token::Operator(Operator::Eq), Token::Operator(Operator::Eq)) => true,
             _ => false

@@ -18,7 +18,7 @@ use crate::token::Operator;
 
 pub fn run_shell() {
     let mut stack: Vec<StackValue> = Vec::new();
-    let mut variable_scope_map: HashMap<String, Var> = HashMap::new();
+    let mut variable_scope_map: HashMap<String, usize> = HashMap::new();
     let scope = 0;
 
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
@@ -52,7 +52,7 @@ fn handle_user_input(
     line: String,
     stack: &mut Vec<StackValue>,
     mut scope: usize,
-    variable_scope_map: &mut HashMap<String, Var>
+    variable_scope_map: &mut HashMap<String, usize>
 ) -> usize {
     // Tokenize string
     let mut tokens: Vec<Token> = match tokenize(line) {
@@ -104,7 +104,7 @@ fn eval_let(
     tokens: &mut Vec<Token>,
     stack: &mut Vec<StackValue>,
     scope: usize,
-    variable_scope_map: &mut HashMap<String, Var>
+    variable_scope_map: &mut HashMap<String, usize>
 ) -> Result<usize, String> {
     // Pop let token
     match tokens.pop() {
@@ -112,7 +112,7 @@ fn eval_let(
         _ => panic!("First token must be a let when calling handle_let function")
     };
     // Pop variable token
-    let var_name = match tokens.pop() {
+    let var_name: String = match tokens.pop() {
         Option::Some(Token::Operand(Operand::Var(name))) => name,
         _ => return Result::Err(String::from("SyntaxError: expected variable token"))
     };
@@ -123,7 +123,7 @@ fn eval_let(
         _ => return Result::Err(String::from("SyntaxError: expected '=' token"))
     };
 
-    let exp: Exp = match parse_tokens(tokens, scope, variable_scope_map) {
+    let exp: Exp = match parse_tokens(tokens, scope + 1, variable_scope_map) {
         Result::Ok(exp) => exp,
         Result::Err(err) => return Result::Err(String::from(format!("SyntaxError: {}", err.msg)))
     };
@@ -131,7 +131,7 @@ fn eval_let(
         Result::Ok(val) => val,
         Result::Err(err) => return Result::Err(err.msg)
     };
-    variable_scope_map.insert(var_name.clone(), Var{name: var_name, scope: scope});
-    //stack.push(*val);
+    variable_scope_map.insert(var_name, scope);
+    stack.push(StackValue::from_box(Box::new(val)));
     Result::Ok(scope + 1)
 }

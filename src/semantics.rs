@@ -1,4 +1,5 @@
 use crate::expression::Exp;
+use crate::parser::SyntaxError;
 use crate::value::{Value, StackValue, Function};
 
 use Value::Int;
@@ -55,8 +56,27 @@ pub fn eval_expression(exp: Exp, stack: &mut Vec<StackValue>) -> Result<Value, E
             eval_expression(branch, stack)
         }
 
-        Exp::FunctionCall(callable, args) => panic!("Not implemented TODO"),
-        Exp::FunctionDecl(var, args, body, scope) => panic!("Not implemented TODO"),
+        Exp::Function(args, body) => {
+            Result::Ok(Value::Fn(Function { num_args: args.len(), external_values: Vec::new(), body: *body }))
+        },
+        Exp::FunctionCall(callable, args) => {
+            let function: Function = match eval_expression(*callable, stack)? {
+                Value::Fn(function) => function,
+                _ => return Result::Err(Error{msg: String::from("Expression is not callable")})
+            };
+            if args.len() != function.num_args {
+                return Result::Err(Error { msg: format!("Wrong number of arguments. Expected {}, found {}", function.num_args, args.len()) })
+            }
+            for arg in args {
+                let value: Value = eval_expression(arg, stack)?;
+                stack.push(StackValue::from_box(Box::new(value)))
+            };
+            let result: Value = eval_expression(function.body, stack)?;
+            for _ in 0..function.num_args {
+                stack.pop();
+            }
+            Result::Ok(result)
+        },
 
         Exp::Seq(exp1, exp2) => {
             eval_expression(*exp1, stack)?;

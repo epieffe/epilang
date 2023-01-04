@@ -21,6 +21,7 @@ pub fn make_token(word: &String) -> Result<Token, ()> {
         "*" => Token::Operator(Operator::Mul),
         "/" => Token::Operator(Operator::Div),
         "let" => Token::Let,
+        "fn" => Token::Fn,
         "if" => Token::If,
         "else" => Token:: Else,
         "(" => Token::RoundBracketOpen,

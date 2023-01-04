@@ -8,10 +8,10 @@ pub enum Exp {
     Var(Var),
     // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
-    // Function declaration. Eg: fn my_func(arg_1, .. arg_n) { body } exp
-    FunctionDecl(Var, Vec<Var>, Box<Exp>, Box<Exp>),
     // If then else. Eg: if exp {exp1} else {exp2}
     IfThenElse(Box<Exp>, Box<Exp>, Box<Exp>),
+    // Function definition. Eg: fn (arg_1, .. arg_n) { body }
+    Function(Vec<Var>, Box<Exp>),
     // Function call. Eg: exp(arg_1, ... , arg_n)
     FunctionCall(Box<Exp>, Vec<Exp>),
     // Eg: x = exp

@@ -6,6 +6,8 @@ mod semantics;
 mod shell;
 mod value;
 
+use std::ops::Add;
+
 use parser::parse;
 
 use lexer::tokenize;
@@ -21,7 +23,7 @@ use value::{Value};
 fn main() {
     let mode = "SHELL";
 
-    if mode == "SHELLa" {
+    if mode == "SHELLaq" {
         shell::run_shell()
     } else {
         run_text()
@@ -32,7 +34,11 @@ fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
     let scope: usize = 0;
 
-    let text = "let x = 3 ; let y = 4 ; x + y + 2";
+    let text = "let x = 3 ; let y = 4 ; let z = x + y + 2 ; z + x";
+
+    let text = "let f = fn ( x , y ) { x + y } ; f ( 3 , 2 ) ; f ( 2 , 3 )";
+
+    //let text = "let f = fn ( x , y ) { x + y } ; f ( 1 , f ( 5 , 6 ) )";
 
     //let text = "let x = 0 ; let y = 0 ; if ( x == 0 ) { y = 1 } else { y = 2 } ; y";
 
@@ -84,7 +90,8 @@ fn var_to_string(var: &Var) -> String {
 }
 
 fn vars_to_string(vars: &Vec<Var>) -> String {
-    format!("{}", vars.iter().map(|var| {var_to_string(var)}).collect::<String>())
+    let names: Vec<String> = vars.iter().map(|var| {var_to_string(var)}).collect();
+    format!("{}", names.join(", "))
 }
 
 pub fn exp_to_string(exp: &Exp) -> String {
@@ -92,12 +99,7 @@ pub fn exp_to_string(exp: &Exp) -> String {
         Exp::Const(c) => const_to_string(c),
         Exp::Var(x) => var_to_string(x),
         Exp::Decl(x, val, scope) => format!("let {} = {};\n{}", var_to_string(x), exp_to_string(val), exp_to_string(scope)),
-        Exp::FunctionDecl(f, args, body, scope) => format!("fn f{}({}){{\n{}\n}};\n{}",
-            f.scope,
-            vars_to_string(args),
-            exp_to_string(body),
-            exp_to_string(scope)
-        ),
+        Exp::Function(args, body) => format!("fn ({}){{\n{}\n}}", vars_to_string(args), exp_to_string(body)),
         Exp::Assign(x, e) => format!("{} = {}", var_to_string(x), exp_to_string(e)),
         Exp::Seq(e1, e2) => format!("{};\n{}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Sum(e1, e2) => format!("{} + {}", exp_to_string(e1), exp_to_string(e2)),

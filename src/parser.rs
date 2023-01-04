@@ -1,4 +1,3 @@
-use core::num;
 use std::collections::HashMap;
 
 use crate::expression::Exp;
@@ -13,6 +12,12 @@ pub struct SyntaxError {
     pub msg: String
 }
 
+struct Function {
+    start_at_scope: usize,
+    input_vars: Vec<Var>,
+    external_variables: Vec<usize>
+}
+
 pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, SyntaxError> {
     let mut variable_map = HashMap::new();
     parse_tokens(tokens, 0, &mut variable_map)
@@ -21,7 +26,7 @@ pub fn parse(tokens: &mut Vec<Token>) -> Result<Exp, SyntaxError> {
 pub fn parse_tokens(
     tokens: &mut Vec<Token>,
     scope: usize,
-    variable_map: &mut HashMap<String, Var>,
+    variable_map: &mut HashMap<String, usize>,
 ) -> Result<Exp, SyntaxError> {
     // Initialize the operator stack
     let mut stack: Vec<Token> = Vec::new();
@@ -33,11 +38,12 @@ pub fn parse_tokens(
 
     // When callable is true the `(` token is interpreted as a function call
     let mut callable = false;
-
-    // If we are in the scope of a function call, then the round bracket that
-    // marks the beginning of this function call is in the operator stack
-    // at position `call_scope.last()`.
+    // If we are parsing some function call arguments, then the round bracket that marks the beginning of this function call is
+    // in the operator stack at position `call_scope.last()`
     let mut call_scope: Vec<usize> = Vec::new();
+
+    // If we are inside some function declaration, then this function input variables are located at `function_input_vars.last()`
+    let mut function_input_stack: Vec<Function> = Vec::new();
 
     loop {
         if tokens.is_empty() { break };
@@ -45,7 +51,7 @@ pub fn parse_tokens(
         match &token {
             // Push variable to out. Error if not present in scope
             Token::Operand(Operand::Var(x)) => match variable_map.get(x) {
-                Option::Some(v) => out.push(Exp::Var(Var{name: x.clone(), scope: v.scope})),
+                Option::Some(scope) => out.push(Exp::Var(Var{name: x.clone(), scope: *scope})),
                 Option::None => return Result::Err(SyntaxError{msg: String::from(format!("Unknow variable {}", x))})
             }
             // Operands that are not variables are easily pushed to out
@@ -67,11 +73,9 @@ pub fn parse_tokens(
                 handle_operator_token(*op, &mut stack, &mut out)?
             },
 
-            Token::RoundBracketOpen => {
-                handle_rould_bracket_open_token(&mut stack, &mut call_scope, callable)
-            },
+            Token::RoundBracketOpen => handle_rould_bracket_open_token(&mut stack, &mut call_scope, callable),
 
-            Token::RoundBracketClosed => handle_round_bracket_closed_token(&mut stack, &mut out, &mut call_scope)?,
+            Token::RoundBracketClosed => handle_round_bracket_closed_token(tokens, &mut stack, &mut out, &mut call_scope, &mut function_input_stack, variable_map)?,
 
             Token::If => stack.push(Token::If),
 
@@ -82,11 +86,26 @@ pub fn parse_tokens(
                 scope = handle_let_token(tokens, &mut stack, variable_map, scope)?
             },
 
+            Token::Fn => {
+                let input_vars: Vec<Var> = parse_function_def(tokens)?.iter().map(|name| {
+                    variable_map.insert(name.clone(), scope);
+                    let var = Var{name: name.clone(), scope: scope};
+                    scope += 1;
+                    var
+                }).collect();
+                function_input_stack.push(Function {
+                    start_at_scope: scope - input_vars.len(),
+                    input_vars: input_vars,
+                    external_variables: Vec::new()
+                });
+                stack.push(Token::Fn)
+            },
+
             Token::CurlyBracketOpen => stack.push(Token::CurlyBracketOpen),
 
             Token::CurlyBracketClosed => {
                 // Closing curly brackets can decrement scope
-                scope = handle_curly_bracket_closed_token(&mut stack, &mut out, scope)?;
+                scope = handle_curly_bracket_closed_token(&mut stack, &mut out, scope, &mut function_input_stack, variable_map)?;
                 // After closing a curly bracket we automatically insert `;` if not present.
                 // This makes the syntax more similar to Java, C++ etc
                 match tokens.last() {
@@ -117,6 +136,7 @@ pub fn parse_tokens(
                 scope -= 1;
                 push_let_expr_to_out(&mut out, scope)?
             }
+            Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `{`")}),
             Option::Some(Token::CurlyBracketClosed) => return Result::Err(SyntaxError{msg: String::from("Unexpected `}`")}),
             Option::Some(Token::If) => return Result::Err(SyntaxError{msg: String::from("Unexpected `if`")}),
@@ -139,13 +159,13 @@ pub fn parse_tokens(
 fn handle_let_token(
     tokens: &mut Vec<Token>,
     stack: &mut Vec<Token>,
-    variable_map: &mut HashMap<(String), Var>,
+    variable_map: &mut HashMap<String, usize>,
     scope: usize
 ) -> Result<usize, SyntaxError> {
 
     match tokens.last() {
-        Option::Some(Token::Operand(Operand::Var(var))) => {
-            variable_map.insert(var.clone(), Var{name: var.clone(), scope: scope});
+        Option::Some(Token::Operand(Operand::Var(name))) => {
+            variable_map.insert(name.clone(), scope);
         },
         _ => return Result::Err(SyntaxError{msg: String::from("Expected variable name after let")})
     };
@@ -169,7 +189,7 @@ fn handle_rould_bracket_open_token(stack: &mut Vec<Token>,  call_scope: &mut Vec
  * While popping elements from the operator stack, we decrement the scope by 1 every time we find
  * a Let token. The new scope value is returned.
  */
-fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>, mut scope: usize) -> Result<usize, SyntaxError> {
+fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>, mut scope: usize, function_input_stack: &mut Vec<Function>, variable_map: &mut HashMap<String, usize>) -> Result<usize, SyntaxError> {
     loop {
         match stack.pop() {
             Option::Some(Token::CurlyBracketOpen) => break,
@@ -188,6 +208,7 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
             Option::Some(Token::Comma) => return Result::Err(SyntaxError{msg: String::from("Unexpected `,`")}),
             Option::None => return Result::Err(SyntaxError{msg: String::from("Curly brackets mismatch")}),
             Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
+            Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in curly brackets")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
@@ -221,6 +242,19 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
                 _ => return Result::Err(SyntaxError{msg: String::from("Unexpected else")})
             }
         },
+        // Check if this curly bracket closes a function declaration
+        Option::Some(Token::Fn) => {
+            stack.pop();
+            let function: Function = function_input_stack.pop().ok_or(SyntaxError{msg: String::from("WTF is going on? I thought this could never happen xD")})?;
+            let body: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Missing function declaration body")})?;
+            let mut args: Vec<Var> = Vec::new();
+            scope -= function.input_vars.len();
+            for arg in function.input_vars {
+                variable_map.remove(&arg.name);
+                args.push(arg)
+            }
+            out.push(Exp::Function(args, Box::new(body)))
+        }
         _ => ()
     };
     // Return new scope value
@@ -232,22 +266,24 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
  * a RoundBracketOpen. If the RoundBracketOpen position in the operator stack matches the one in the call scope,
  * then this is a function call, otherwise these are just a regular grouping brackets.
  */
-fn handle_round_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>, call_scope: &mut Vec<usize>) -> Result<(), SyntaxError> {
-    let mut is_function_call = false;
-    let mut num_commas: usize = 0;
+fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Vec<Exp>, call_scope: &mut Vec<usize>, function_input_stack: &mut Vec<Function>, variable_map: &mut HashMap<String, usize>) -> Result<(), SyntaxError> {
+    let is_function_call: bool;
+    // Case of functions and function calls with zero arguments is a special case covered when an open round bracket is found
+    let mut num_arguments: usize = 1;
     loop {
         match stack.pop() {
             Option::None => return Result::Err(SyntaxError{msg: String::from("Mismatched round brackets")}),
             Option::Some(Token::RoundBracketOpen) => {
                 // Check if this is a function call or not
-                call_scope.last().map(|index| {
-                    is_function_call = *index == stack.len()
-                });
+                is_function_call = call_scope.last()
+                    .map(|stack_index: &usize| { *stack_index == stack.len()})
+                    .unwrap_or(false);
                 break
             },
             Option::Some(Token::Operator(op)) => push_operator_to_out(&op, out)?,
-            Option::Some(Token::Comma) => num_commas += 1,
+            Option::Some(Token::Comma) => num_arguments += 1,
             Option::Some(Token::Let) => return Result::Err(SyntaxError{msg: String::from("Unexpected let statement in round brackets")}),
+            Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in round brackets")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
@@ -259,19 +295,18 @@ fn handle_round_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
     if is_function_call {
         // Decrement the function call scope by one
         call_scope.pop();
-        // Parse function call arguments
-        let num_arguments = num_commas + 1;
+        // Get function call arguments from autput queue
         let mut args: Vec<Exp> = Vec::with_capacity(num_arguments);
         for _ in 0..num_arguments {
-            let arg = out.pop().ok_or(SyntaxError{msg: String::from("Wrong number of function call arguments")})?;
+            let arg: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Wrong number of function call arguments")})?;
             args.push(arg)
         }
         args.reverse();
         // Build function call expression
-        let callable_expr = out.pop().ok_or(SyntaxError{msg: String::from("Missing callable expression before function call")})?;
-        out.push(Exp::FunctionCall(Box::new(callable_expr), args));
+        let callable_exp: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Missing callable expression before function call")})?;
+        out.push(Exp::FunctionCall(Box::new(callable_exp), args));
     }
-    else if num_commas > 0 {
+    else if num_arguments > 1 {
         return  Result::Err(SyntaxError{msg: String::from("Unexpected `,` inside round brackets")})
     }
     Result::Ok(())
@@ -282,9 +317,13 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
         match stack.last() {
             Option::None => break,
             Option::Some(
-                Token::RoundBracketOpen | Token::CurlyBracketOpen |
-                Token::If | Token::Else |
-                Token::Let | Token::Comma
+                Token::RoundBracketOpen |
+                Token::CurlyBracketOpen |
+                Token::If |
+                Token::Else |
+                Token::Let |
+                Token::Fn |
+                Token::Comma
             ) => break,
             Option::Some(Token::Operator(o2)) => {
                 if o2.precedence() >= op.precedence() {
@@ -305,8 +344,31 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
     Result::Ok(())
 }
 
+fn parse_function_def(tokens: &mut Vec<Token>) -> Result<Vec<String>, SyntaxError> {
+    match tokens.pop() {
+        Option::Some(Token::RoundBracketOpen) => (),
+        _ => return Result::Err(SyntaxError{msg: String::from("")})
+    };
+    let mut input_vars: Vec<String> = Vec::new();
+    loop {
+        match tokens.pop() {
+            Option::Some(Token::RoundBracketClosed) => break,
+            Option::Some(Token::Operand(Operand::Var(name))) => {
+                input_vars.push(name);
+                match tokens.pop() {
+                    Option::Some(Token::RoundBracketClosed) => break,
+                    Option::Some(Token::Comma) => (),
+                    _ => return Result::Err(SyntaxError{msg: String::from("Expected `,` after function argument")})
+                }
+            },
+            _ => return Result::Err(SyntaxError{msg: String::from("Malformed function params")})
+        };
+    };
+    Result::Ok(input_vars)
+}
+
 fn push_let_expr_to_out(out: &mut Vec<Exp>, scope: usize) -> Result<(), SyntaxError> {
-    let (exp1, exp2) = match out.pop() {
+    let (exp1, exp2) : (Exp, Box<Exp>) = match out.pop() {
         // If the next element in the queue is not `;` return error
         Option::Some(Exp::Seq(exp1, exp2)) => (*exp1, exp2),
         _ => return Result::Err(SyntaxError { msg:  String::from("Expected ; after let")})
