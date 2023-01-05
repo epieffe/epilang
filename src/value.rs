@@ -9,7 +9,7 @@ use crate::expression::Const;
 pub struct Function {
     pub num_args: usize,
     pub external_values: Vec<Value>,
-    pub body: Exp
+    pub body: *const Exp
 }
 
 #[derive(Copy, Clone)]
@@ -57,12 +57,12 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn from_const(c: Const) -> Value {
+    pub fn from_const(c: &Const) -> Value {
         match c {
             Const::None => Value::Unit,
-            Const::Integer(i) => Value::Int(isize::try_from(i).ok().unwrap()),
-            Const::Boolean(b) => Value::Bool(b),
-            Const::String(s) => Value::Str(s)
+            Const::Integer(i) => Value::Int(isize::try_from(*i).ok().unwrap()),
+            Const::Boolean(b) => Value::Bool(*b),
+            Const::String(s) => Value::Str(s.clone())
         }
     }
 }

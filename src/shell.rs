@@ -86,7 +86,7 @@ fn handle_user_input(
         }
     };
     // Evaluate expression
-    match eval_expression(exp, stack) {
+    match eval_expression(&exp, stack) {
         Result::Ok(Value::Unit) => (),
         Result::Ok(val) => {
             println!("{}", val);
@@ -127,7 +127,7 @@ fn eval_let(
         Result::Ok(exp) => exp,
         Result::Err(err) => return Result::Err(String::from(format!("SyntaxError: {}", err.msg)))
     };
-    let val = match eval_expression(exp, stack) {
+    let val = match eval_expression(&exp, stack) {
         Result::Ok(val) => val,
         Result::Err(err) => return Result::Err(err.msg)
     };
