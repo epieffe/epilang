@@ -23,7 +23,7 @@ use value::{Value};
 fn main() {
     let mode = "SHELL";
 
-    if mode == "SHELLaq" {
+    if mode == "SHELL" {
         shell::run_shell()
     } else {
         run_text()
@@ -34,13 +34,13 @@ fn run_text() {
     let mut stack: Vec<Const> = Vec::new();
     let scope: usize = 0;
 
-    let text = "let x = 3 ; let y = 4 ; let z = x + y + 2 ; z + x";
+    let text = "let x = 1 ; x + 1";
 
-    let text = "let f = fn ( x , y ) { x + y } ; f ( 3 , 2 ) ; f ( 2 , 3 )";
+    //let text = "let f = fn ( x , y ) { x + y } ; f ( 3 , 2 ) ; f ( 2 , 3 )";
 
-    //let text = "let x = 3 ; let y = x + x ; x + y";
+    let text = "{ let f = fn ( x ) { x + 2 } ; let y = 4 ; f ( 1 ) ; f ( f ( y ) ) }";
 
-    let text = "let f = fn ( x , y ) { x + y } ; f ( 1 , f ( 5 , 6 ) )";
+    // let text = "let f = fn ( x , y ) { x + y } ; f ( 1 , f ( 5 , 6 ) )";
 
     //let text = "let x = 0 ; let y = 0 ; if ( x == 0 ) { y = 1 } else { y = 2 } ; y";
 
@@ -70,7 +70,7 @@ fn run_text() {
     println!("########");
 
     // Evaluate expression
-    let val: Value = eval(&exp).unwrap_or_else(|err| {
+    let val = eval(&exp).unwrap_or_else(|err| {
         panic!("RuntimeError: {}", err.msg)
     });
 

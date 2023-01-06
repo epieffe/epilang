@@ -9,7 +9,7 @@ use crate::expression::Const;
 pub struct Function {
     pub num_args: usize,
     pub external_values: Vec<Value>,
-    pub body: *const Exp
+    pub body: Box<Exp>
 }
 
 #[derive(Copy, Clone)]
@@ -30,20 +30,12 @@ impl StackValue {
         StackValue{value: ptr::null_mut()}
     }
 
-    pub fn read_value(&self) -> Value {
-        unsafe { self.value.read() }
+    pub fn is_unit(&self) -> bool {
+        self.value.is_null()
     }
 
-    pub fn as_ptr(&self) -> *mut Value {
-        self.value
-    }
-
-    fn as_int(&self) -> isize {
-        self.value as isize
-    }
-
-    fn as_bool(&self) -> bool {
-        if self.as_int() == 0 { false } else { true }
+    pub fn as_ref(&self) -> &Value {
+        unsafe{ &*self.value }
     }
 }
 
@@ -65,6 +57,16 @@ impl Value {
             Const::String(s) => Value::Str(s.clone())
         }
     }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Value::Unit => false,
+            Value::Bool(b) => *b,
+            Value::Int(i) => *i != 0,
+            Value::Str(s) => s == "",
+            Value::Fn(_) => true
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -75,6 +77,38 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Str(s) => write!(f, "{}", s),
             Value::Fn(func) => write!(f, "{:?}", func)
+        }
+    }
+}
+
+///////////
+
+pub enum V {
+    Val(Value),
+    Ptr(StackValue)
+}
+
+impl V {
+    pub fn as_bool(&self) -> bool {
+        match self {
+            V::Ptr(ptr) => if ptr.is_unit() {false} else {ptr.as_ref().as_bool()},
+            V::Val(value) => value.as_bool()
+        }
+    }
+
+    pub fn as_ref(&self) -> &Value {
+        match self {
+            V::Ptr(ptr) => ptr.as_ref(),
+            V::Val(value) => value
+        }
+    }
+}
+
+impl fmt::Display for V {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            V::Ptr(ptr) => if ptr.is_unit() {write!(f, "unit")}  else {write!(f, "{}", ptr.as_ref())},
+            V::Val(value) => write!(f, "{}", value)
         }
     }
 }
