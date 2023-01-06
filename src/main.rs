@@ -1,13 +1,13 @@
 mod expression;
 mod token;
 mod parser;
-mod tokenizer;
+mod lexer;
 mod semantics;
 mod shell;
 
 use parser::parse;
 
-use tokenizer::tokenize;
+use lexer::tokenize;
 
 use token::Token;
 
@@ -91,3 +91,160 @@ fn exp_to_string(exp: &Exp) -> String {
         Exp::IfThenElse(e, e1, e2) => format!("if {} {{ {} }} else {{ {} }}", exp_to_string(e), exp_to_string(e1), exp_to_string(e2))
     }
 }
+
+
+
+
+
+
+
+// ###################################### TEST ###########################################################
+
+
+#[cfg(test)]
+mod tests {
+    use parser::parse_tokens;
+    use std::collections::HashMap;
+    use crate::expression::Var;
+
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    fn eval_program(text: String) -> Result<Const, ()> {
+        let mut stack: Vec<Const> = Vec::new();
+        let mut variable_scope_map: HashMap<String, Var> = HashMap::new();
+        let scope: usize = 0;
+    
+        let mut tokens: Vec<Token> = tokenize(text)?;
+    
+        // Parse tokens to exp
+        let exp: Exp = parse_tokens(&mut tokens, scope, &mut variable_scope_map).or(Result::Err(()))?;
+    
+        // Evaluate expression
+        let val: Const = eval_expression(exp, &mut stack).or(Result::Err(()))?;
+    
+        Result::Ok(val)
+    }
+
+    #[test]
+    fn test1() {
+        assert_eq!(eval_program(String::from("2 + 2")), Result::Ok(Const::Integer(4)));
+        assert_eq!(eval_program(String::from("2 - 2")), Result::Ok(Const::Integer(0)));
+        assert_eq!(eval_program(String::from("2 * 2")), Result::Ok(Const::Integer(4)));
+        assert_eq!(eval_program(String::from("2 / 2")), Result::Ok(Const::Integer(1)));
+        assert_eq!(eval_program(String::from("2 + 2 * 3")), Result::Ok(Const::Integer(8)));
+        assert_eq!(eval_program(String::from("2 - 2 * 3")), Result::Ok(Const::Integer(-4)));
+        assert_eq!(eval_program(String::from("2 * 2 + 3 * 3")), Result::Ok(Const::Integer(13)));
+        assert_eq!(eval_program(String::from("2 / 1 + 1")), Result::Ok(Const::Integer(3)));
+    }
+
+    #[test]
+    fn test2() {
+        assert_eq!(eval_program(String::from("2 < 3")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("2 > 3")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("2 + 2 < 3")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("2 + 2 > 3")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("10 * 10 > 90 + 10 - 1 ")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("10 * 10 < 90 + 10 - 1 ")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("100 / 10 > 3 + 3 ")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("100 / 10 < 3 + 3 ")), Result::Ok(Const::Boolean(false)));
+    }
+
+    #[test]
+    fn test3() {
+        assert_eq!(eval_program(String::from("true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("false")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! true")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! false")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("true && true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("true && ! true")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("true || true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("true || ! true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("! true || ! true")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! ! true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("! ! ! true")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! ! false")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! ! ! false")), Result::Ok(Const::Boolean(true)));
+    }
+
+    #[test]
+    fn test4() {
+        assert_eq!(eval_program(String::from("true == true")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("true == false")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("1 == 1")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("1 == 2")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("2 * 2 == 2 + 2 / 2 + 1")), Result::Ok(Const::Boolean(true)));
+    }
+
+    #[test]
+    fn test5() {
+        assert_eq!(eval_program(String::from("true != true")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("true != false")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("1 != 1")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("1 != 2")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("2 * 2 != 2 + 2 / 2 + 1")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("! 3 == 3")), Result::Ok(Const::Boolean(false)));
+        assert_eq!(eval_program(String::from("( ! 3 == 3 ) == ( 3 != 3 )")), Result::Ok(Const::Boolean(true)));
+        assert_eq!(eval_program(String::from("( ! 3 != 3 ) == ( 3 == 3 )")), Result::Ok(Const::Boolean(true)));
+    }
+
+    #[test]
+    fn test6() {
+        assert_eq!(eval_program(String::from("let x = 0 ; let y = 0 ; if (x == 0) { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(1)));
+        assert_eq!(eval_program(String::from("let x = 1 ; let y = 0 ; if (x == 0) { y = 1 } else { y = 2 } ; y")), Result::Ok(Const::Integer(2)));
+        
+        let text1 = String::from("
+            let x = 0 ;
+            let y = 0 ;
+            if (x == 0) {
+                if (y == 0) {
+                    0 ; 
+                }
+                else {
+                    1 ;
+                }
+            }
+            else {
+                2 ;
+            }");
+        
+        assert_eq!(eval_program(text1), Result::Ok(Const::Integer(0)));
+
+        let text2 = String::from("
+            let x = 0 ;
+            let y = 1 ;
+            if (x == 0) {
+                if (y == 0) {
+                    0 ; 
+                }
+                else {
+                    1 ;
+                }
+            }
+            else {
+                2 ;
+            }");
+        
+        assert_eq!(eval_program(text2), Result::Ok(Const::Integer(1)));
+
+        let text3 = String::from("
+            let x = 1 ;
+            let y = 0 ;
+            if (x == 0) {
+                if (y == 0) {
+                    0 ; 
+                }
+                else {
+                    1 ;
+                }
+            }
+            else {
+                2 ;
+            }");
+        
+        assert_eq!(eval_program(text3), Result::Ok(Const::Integer(2)));
+    }
+
+}
+
+

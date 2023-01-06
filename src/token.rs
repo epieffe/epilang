@@ -80,7 +80,7 @@ impl Operator {
             Operator::Div => 1,
             Operator::Sum => 2,
             Operator::Sub => 2,
-            Operator::Not => 3,
+            Operator::Not => 4,
             Operator::Lt => 4,
             Operator::Gt => 4,
             Operator::Eq => 4,
