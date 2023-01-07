@@ -113,6 +113,7 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
                 match tokens.last() {
                     Option::Some(Token::Operator(Operator::Seq)) => (),
                     Option::Some(Token::Else) => (),
+                    Option::Some(Token::CurlyBracketClosed) => (),
                     Option::None => (),
                     _ => tokens.push(Token::Operator(Operator::Seq))
                 }

@@ -12,7 +12,7 @@ pub struct Function {
     pub body: Box<Exp>
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct StackValue {
     value: *mut Value,
 }
@@ -69,6 +69,19 @@ impl Value {
     }
 }
 
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Unit, Value::Unit) => true,
+            (Value::Int(i1), Value::Int(i2)) => *i1 == *i2,
+            (Value::Bool(b1), Value::Bool(b2)) => *b1 == *b2,
+            (Value::Str(s1), Value::Str(s2)) => s1 == s2,
+            (Value::Fn(f1), Value::Fn(f2)) => std::ptr::eq(f1, f2),
+            _ => false
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -83,6 +96,7 @@ impl fmt::Display for Value {
 
 ///////////
 
+#[derive(Debug)]
 pub enum V {
     Val(Value),
     Ptr(StackValue)
@@ -101,6 +115,18 @@ impl V {
             V::Ptr(ptr) => ptr.as_ref(),
             V::Val(value) => value
         }
+    }
+}
+
+impl PartialEq for V {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_ref() == other.as_ref()
+    }
+}
+
+impl PartialEq<Value> for V {
+    fn eq(&self, other: &Value) -> bool {
+        self.as_ref() == other
     }
 }
 

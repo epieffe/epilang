@@ -187,6 +187,7 @@ fn gt(val1: &Value, val2: &Value) -> Result<Value, Error> {
 fn eq(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 == i2)),
+        (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(b1 == b2)),
         _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
     }
 }
@@ -194,6 +195,7 @@ fn eq(val1: &Value, val2: &Value) -> Result<Value, Error> {
 fn neq(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 != i2)),
+        (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(b1 != b2)),
         _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
     }
 }
