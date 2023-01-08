@@ -52,6 +52,10 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                 flush_token_buffer(&mut token_buffer, &mut tokens);
                 tokens.push(Token::Operator(Operator::Seq));
             }
+            ',' => {
+                flush_token_buffer(&mut token_buffer, &mut tokens);
+                tokens.push(Token::Comma);
+            }
             '+' => {
                 flush_token_buffer(&mut token_buffer, &mut tokens);
                 tokens.push(Token::Operator(Operator::Sum));
