@@ -73,9 +73,9 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
                 handle_operator_token(*op, &mut stack, &mut out)?
             },
 
-            Token::RoundBracketOpen => handle_rould_bracket_open_token(&mut stack, &mut call_scope, callable),
+            Token::RoundBracketOpen => handle_rould_bracket_open_token(tokens, &mut stack, &mut out, &mut call_scope, callable)?,
 
-            Token::RoundBracketClosed => handle_round_bracket_closed_token(tokens, &mut stack, &mut out, &mut call_scope)?,
+            Token::RoundBracketClosed => handle_round_bracket_closed_token(tokens, &mut stack, &mut out, &mut call_scope, true)?,
 
             Token::If => stack.push(Token::If),
 
@@ -177,14 +177,23 @@ fn handle_let_token(
     Result::Ok(())
 }
 
-fn handle_rould_bracket_open_token(stack: &mut Vec<Token>,  call_scope: &mut Vec<usize>, callable: bool) {
+fn handle_rould_bracket_open_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Vec<Exp>,  call_scope: &mut Vec<usize>, callable: bool) -> Result<(), SyntaxError> {
     if callable {
         let stack_index =  stack.len();
         call_scope.push(stack_index);
         stack.push(Token::RoundBracketOpen);
+        match tokens.last() {
+            Option::Some(Token::RoundBracketClosed) => {
+                // This is a function call with zero arguments. We need to call handle_round_bracket_closed_token with `args = false`
+                tokens.pop();
+                handle_round_bracket_closed_token(tokens, stack, out, call_scope, false)?;
+            }
+            _ => ()
+        }
     } else {
         stack.push(Token::RoundBracketOpen)
     }
+    Result::Ok(())
 }
 
 /**
@@ -267,10 +276,10 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
  * a RoundBracketOpen. If the RoundBracketOpen position in the operator stack matches the one in the call scope,
  * then this is a function call, otherwise these are just a regular grouping brackets.
  */
-fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Vec<Exp>, call_scope: &mut Vec<usize>) -> Result<(), SyntaxError> {
+fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<Token>, out: &mut Vec<Exp>, call_scope: &mut Vec<usize>, args: bool) -> Result<(), SyntaxError> {
     let is_function_call: bool;
     // Case of functions and function calls with zero arguments is a special case covered when an open round bracket is found
-    let mut num_arguments: usize = 1;
+    let mut num_arguments: usize = if args { 1 } else { 0 };
     loop {
         match stack.pop() {
             Option::None => return Result::Err(SyntaxError{msg: String::from("Mismatched round brackets")}),
