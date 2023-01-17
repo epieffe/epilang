@@ -86,8 +86,8 @@ fn handle_user_input(
     // Parse tokens to exp
     let exp: Exp = match parse_tokens(&mut tokens, function_stack) {
         Result::Ok(exp) => exp,
-        Result::Err(_) => {
-            println!("Syntax error");
+        Result::Err(err) => {
+            println!("Syntax error: {}", err.msg);
             return
         }
     };
