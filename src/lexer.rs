@@ -26,6 +26,8 @@ pub fn make_token(word: &String) -> Result<Token, ()> {
         "else" => Token:: Else,
         "(" => Token::RoundBracketOpen,
         ")" => Token::RoundBracketClosed,
+        "[" => Token::SquareBracketOpen,
+        "]" => Token::SquareBracketClosed,
         "{" => Token::CurlyBracketOpen,
         "}" => Token::CurlyBracketClosed,
         "," => Token::Comma,
@@ -79,6 +81,14 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             ')' => {
                 flush_token_buffer(&mut token_buffer, &mut tokens);
                 tokens.push(Token::RoundBracketClosed);
+            }
+            '[' => {
+                flush_token_buffer(&mut token_buffer, &mut tokens);
+                tokens.push(Token::SquareBracketOpen);
+            }
+            ']' => {
+                flush_token_buffer(&mut token_buffer, &mut tokens);
+                tokens.push(Token::SquareBracketClosed);
             }
             '{' => {
                 flush_token_buffer(&mut token_buffer, &mut tokens);

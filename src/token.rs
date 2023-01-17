@@ -11,6 +11,8 @@ pub enum Token {
     Fn,
     RoundBracketOpen,
     RoundBracketClosed,
+    SquareBracketOpen,
+    SquareBracketClosed,
     CurlyBracketOpen,
     CurlyBracketClosed,
     Comma
@@ -25,6 +27,7 @@ impl Token {
         match self {
             Token::Operand(_) => true,
             Token::RoundBracketClosed => true,
+            Token::SquareBracketClosed => true,
             Token::Operator(_) => false,
             Token::If => false,
             Token::Else => false,
@@ -33,6 +36,7 @@ impl Token {
             Token::RoundBracketOpen => false,
             Token::CurlyBracketOpen => false,
             Token::CurlyBracketClosed => false,
+            Token::SquareBracketOpen => false,
             Token::Comma => false,
         }
     }

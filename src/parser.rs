@@ -77,6 +77,10 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
 
             Token::RoundBracketClosed => handle_round_bracket_closed_token(tokens, &mut stack, &mut out, &mut call_scope, true)?,
 
+            Token::SquareBracketOpen => stack.push(Token::SquareBracketOpen),
+
+            Token::SquareBracketClosed => handle_square_bracket_closed_token(&mut stack, &mut out, false)?,
+
             Token::If => stack.push(Token::If),
 
             Token::Else => stack.push(Token::Else),
@@ -141,11 +145,13 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
             }
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `{`")}),
+            Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `[`")}),
             Option::Some(Token::CurlyBracketClosed) => return Result::Err(SyntaxError{msg: String::from("Unexpected `}`")}),
             Option::Some(Token::If) => return Result::Err(SyntaxError{msg: String::from("Unexpected `if`")}),
             Option::Some(Token::Else) => return Result::Err(SyntaxError{msg: String::from("Unexpected `else`")}),
             Option::Some(Token::Comma) => return Result::Err(SyntaxError{msg: String::from("Unexpected `,`")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
+            Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
         }
     }
@@ -196,6 +202,37 @@ fn handle_rould_bracket_open_token(tokens: &mut Vec<Token>, stack: &mut Vec<Toke
     Result::Ok(())
 }
 
+fn handle_square_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>, empty: bool) -> Result<(), SyntaxError> {
+    let mut len: usize = if empty { 0 } else { 1 };
+    loop {
+        match stack.pop() {
+            Option::Some(Token::SquareBracketOpen) => break,
+            Option::Some(Token::Operator(op)) => push_operator_to_out(&op, out)?,
+            Option::Some(Token::Comma) => len += 1,
+            Option::Some(Token::Let) => return Result::Err(SyntaxError{msg: String::from("Unexpected let statement in round brackets")}),
+            Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in round brackets")}),
+            Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
+            Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
+            Option::None => return Result::Err(SyntaxError{msg: String::from("Mismatched round brackets")}),
+            Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
+            Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
+            Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
+            Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
+            Option::Some(Token::If) => panic!("Found If in parser operator stack"),
+            Option::Some(Token::Else) => panic!("Found Else in parser operator stack"),
+        }
+    };
+    // Get list elements
+    let mut list: Vec<Exp> = Vec::with_capacity(len);
+    for _ in 0..len {
+        let elem: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Malformed list")})?;
+        list.push(elem)
+    }
+    list.reverse();
+    out.push(Exp::List(list));
+    Result::Ok(())
+}
+
 /**
  * This function is called when a CurlyBracketClosed Token is found.
  * While popping elements from the operator stack, we decrement the scope by 1 every time we find
@@ -220,9 +257,11 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
             Option::Some(Token::Comma) => return Result::Err(SyntaxError{msg: String::from("Unexpected `,`")}),
             Option::None => return Result::Err(SyntaxError{msg: String::from("Curly brackets mismatch")}),
             Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
+            Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in curly brackets")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
+            Option::Some(Token::SquareBracketClosed) => return Result::Err(SyntaxError{msg: String::from("Found SquareBracketClosed in parser operator stack")}),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
             Option::Some(Token::If) => panic!("Found If in parser operator stack"),
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack")
@@ -294,9 +333,11 @@ fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<To
             Option::Some(Token::Comma) => num_arguments += 1,
             Option::Some(Token::Let) => return Result::Err(SyntaxError{msg: String::from("Unexpected let statement in round brackets")}),
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in round brackets")}),
+            Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
+            Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
             Option::Some(Token::If) => panic!("Found If in parser operator stack"),
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack")
@@ -328,6 +369,7 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
             Option::None => break,
             Option::Some(
                 Token::RoundBracketOpen |
+                Token::SquareBracketOpen |
                 Token::CurlyBracketOpen |
                 Token::If |
                 Token::Else |
@@ -346,6 +388,7 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
                 }
             },
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
+            Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_) ) => panic!("Found Operand in parser operator stack"),
         }

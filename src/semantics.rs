@@ -1,12 +1,5 @@
-use std::fmt;
-
 use crate::expression::Exp;
-use crate::parser::SyntaxError;
-use crate::token::Operator;
 use crate::value::{Value, StackValue, Function, V};
-
-use Value::Int;
-use Value::Bool;
 
 pub struct Error {
     pub msg: String
@@ -35,6 +28,18 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
             result
         },
 
+        Exp::List(list) => {
+            let mut values: Vec<StackValue> = Vec::with_capacity(list.len());
+            for exp in list {
+                let value = match eval_expression(exp, stack, stack_start)? {
+                    V::Ptr(ptr) => ptr,
+                    V::Val(value) => StackValue::from_box(Box::new(value))
+                };
+                values.push(value)
+            }
+            Result::Ok(V::Val(Value::List(values)))
+        }
+
         Exp::Assign(var, exp) => {
             match eval_expression(exp, stack, stack_start)? {
                 V::Ptr(ptr) => stack[var.scope + stack_start] = ptr,
@@ -51,6 +56,7 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
         Exp::Function(args, body) => {
             Result::Ok(V::Val(Value::Fn(Function { num_args: args.len(), external_values: Vec::new(), body: body.clone() })))
         },
+
         Exp::FunctionCall(callable, args) => {
             match eval_expression(callable, stack, stack_start)?.as_ref() {
                 Value::Fn(function) => {

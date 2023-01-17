@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Add;
 
 use rustyline::error::ReadlineError;
 use rustyline::{Editor};
@@ -70,6 +71,14 @@ fn exp_to_string(exp: &Exp) -> String {
     match exp {
         Exp::Const(c) => const_to_string(c),
         Exp::Var(x) => var_to_string(x),
+        Exp::List(list) => {
+            let mut s = String::from("[");
+            for exp in list {
+                s.push_str(exp_to_string(exp).as_str())
+            };
+            s.push_str("]\n");
+            s
+        }
         Exp::Decl(x, val, scope) => format!("let {} = {};\n{}", var_to_string(x), exp_to_string(val), exp_to_string(scope)),
         Exp::Function(args, body) => format!("fn ({}){{\n{}\n}}", vars_to_string(args), exp_to_string(body)),
         Exp::Assign(x, e) => format!("{} = {}", var_to_string(x), exp_to_string(e)),

@@ -6,6 +6,8 @@ pub enum Exp {
     Const(Const),
     // Eg: x, y, z
     Var(Var),
+    // List instantiation. Eg: [exp1, ... , expN]
+    List(Vec<Exp>),
     // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
     // If then else. Eg: if exp {exp1} else {exp2}

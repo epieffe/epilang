@@ -1,6 +1,5 @@
 use std::fmt;
 use std::ptr;
-use std::thread;
 
 use crate::expression::Exp;
 use crate::expression::Const;
@@ -22,10 +21,6 @@ impl StackValue {
         StackValue { value: Box::into_raw(val) }
     }
 
-    pub fn from_ptr(ptr: *mut Value) -> StackValue {
-        StackValue { value: ptr }
-    }
-
     pub fn unit() -> StackValue {
         StackValue{value: ptr::null_mut()}
     }
@@ -39,12 +34,19 @@ impl StackValue {
     }
 }
 
+impl fmt::Display for StackValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_ref())
+    }
+}
+
 #[derive(Debug)]
 pub enum Value {
     Unit,
     Int(isize),
     Bool(bool),
     Fn(Function),
+    List(Vec<StackValue>),
     Str(String),
 }
 
@@ -64,7 +66,8 @@ impl Value {
             Value::Bool(b) => *b,
             Value::Int(i) => *i != 0,
             Value::Str(s) => s == "",
-            Value::Fn(_) => true
+            Value::Fn(_) => true,
+            Value::List(_) => true
         }
     }
 }
@@ -89,7 +92,14 @@ impl fmt::Display for Value {
             Value::Int(i) => write!(f, "{}", i),
             Value::Bool(b) => write!(f, "{}", b),
             Value::Str(s) => write!(f, "{}", s),
-            Value::Fn(func) => write!(f, "{:?}", func)
+            Value::Fn(func) => write!(f, "{:?}", func),
+            Value::List(list) => {
+                write!(f, "[")?;
+                for value in list {
+                    write!(f, "{},", value)?;
+                };
+                write!(f, "]")
+            }
         }
     }
 }
