@@ -6,6 +6,8 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::from("");
 
+    // If callable is true, then `(` is interpreted as the start of a function call and `[` is interpreted as the
+    // start of a list selection. Otherwise `(` is a regular round bracket and `[` is the start of a list definition
     let mut callable = false;
 
     let mut chars = text.chars().peekable();
@@ -22,7 +24,14 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                 let token: Token = if callable {Token::FunctionCallOpen} else {Token::RoundBracketOpen};
                 callable = token.is_callable();
                 tokens.push(token)
-            }
+            },
+
+            Option::Some('[') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token: Token = if callable {Token::ListSelectionOpen} else {Token::SquareBracketOpen};
+                callable = token.is_callable();
+                tokens.push(token)
+            },
 
             Option::Some(c) if [
                 ';', ',', '+', '-', '*', '/', '[', ']', '{', '}', ')', '<', '>'

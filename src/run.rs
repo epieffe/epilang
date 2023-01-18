@@ -78,7 +78,8 @@ fn exp_to_string(exp: &Exp) -> String {
             };
             s.push_str("]\n");
             s
-        }
+        },
+        Exp::ListSelection(list, index) => format!("{}[{}]", exp_to_string(list), exp_to_string(index)),
         Exp::Decl(x, val, scope) => format!("let {} = {};\n{}", var_to_string(x), exp_to_string(val), exp_to_string(scope)),
         Exp::Function(args, body) => format!("fn ({}){{\n{}\n}}", vars_to_string(args), exp_to_string(body)),
         Exp::Assign(x, e) => format!("{} = {}", var_to_string(x), exp_to_string(e)),

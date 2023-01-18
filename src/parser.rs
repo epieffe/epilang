@@ -39,9 +39,6 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
     // Initialize the output queue
     let mut out: Vec<Exp> = Vec::new();
 
-    // When callable is true the `(` token is interpreted as a function call
-    let mut callable = false;
-
     loop {
         if tokens.is_empty() { break };
         let token = tokens.pop().unwrap();
@@ -69,6 +66,8 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
                 }
                 handle_operator_token(*op, &mut stack, &mut out)?
             },
+
+            Token::ListSelectionOpen => stack.push(Token::ListSelectionOpen),
 
             Token::FunctionCallOpen => {
                 stack.push(Token::FunctionCallOpen);
@@ -133,8 +132,6 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
             },
             Token::Comma => stack.push(Token::Comma),
         }
-        // Updates the callable state after processing the token
-        callable = token.is_callable();
     }
 
     loop {
@@ -153,6 +150,7 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
             }
             Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected bracket `(`")}),
             Option::Some(Token::FunctionCallOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected function call open `(`")}),
+            Option::Some(Token::ListSelectionOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected list selection open `[`")}),
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `{`")}),
             Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `[`")}),
@@ -194,10 +192,19 @@ fn handle_let_token(
 }
 
 fn handle_square_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>, empty: bool) -> Result<(), SyntaxError> {
+    let is_selection: bool;
     let mut len: usize = if empty { 0 } else { 1 };
+
     loop {
         match stack.pop() {
-            Option::Some(Token::SquareBracketOpen) => break,
+            Option::Some(Token::SquareBracketOpen) => {
+                is_selection = false;
+                break
+            },
+            Option::Some(Token::ListSelectionOpen) => {
+                is_selection = true;
+                break
+            }
             Option::Some(Token::Operator(op)) => push_operator_to_out(&op, out)?,
             Option::Some(Token::Comma) => len += 1,
             Option::Some(Token::Let) => return Result::Err(SyntaxError{msg: String::from("Unexpected let statement in round brackets")}),
@@ -214,14 +221,25 @@ fn handle_square_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack"),
         }
     };
-    // Get list elements
-    let mut list: Vec<Exp> = Vec::with_capacity(len);
-    for _ in 0..len {
-        let elem: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Malformed list")})?;
-        list.push(elem)
-    }
-    list.reverse();
-    out.push(Exp::List(list));
+    if is_selection {
+        if len != 1 {
+            return Result::Err(SyntaxError{msg: String::from("Unexpected `,` in list selection")})
+        }
+        // Get index from output queue
+        let index: Exp = out.pop().ok_or(SyntaxError{msg: String::from("List selection must contain one expression")})?;
+        // Build list selection expression
+        let list: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Missing list expression before list selection")})?;
+        out.push(Exp::ListSelection(Box::new(list), Box::new(index)));
+    } else {
+        // Get list elements
+        let mut list: Vec<Exp> = Vec::with_capacity(len);
+        for _ in 0..len {
+            let elem: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Malformed list")})?;
+            list.push(elem)
+        }
+        list.reverse();
+        out.push(Exp::List(list));
+    };
     Result::Ok(())
 }
 
@@ -250,6 +268,7 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
             Option::None => return Result::Err(SyntaxError{msg: String::from("Curly brackets mismatch")}),
             Option::Some(Token::FunctionCallOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
             Option::Some(Token::RoundBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
+            Option::Some(Token::ListSelectionOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
             Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in curly brackets")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
@@ -328,6 +347,7 @@ fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<To
             Option::Some(Token::Let) => return Result::Err(SyntaxError{msg: String::from("Unexpected let statement in round brackets")}),
             Option::Some(Token::Fn) => return Result::Err(SyntaxError{msg: String::from("Unexpected `fn` token in round brackets")}),
             Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
+            Option::Some(Token::ListSelectionOpen) => return Result::Err(SyntaxError{msg: String::from("Square brackets mismatch")}),
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Round brackets mismatch")}),
             Option::Some(Token::RoundBracketClosed) => panic!("Found RoundBracketClosed in parser operator stack"),
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
@@ -338,7 +358,7 @@ fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<To
         }
     };
     if is_function_call {
-        // Get function call arguments from autput queue
+        // Get function call arguments from output queue
         let mut args: Vec<Exp> = Vec::with_capacity(num_arguments);
         for _ in 0..num_arguments {
             let arg: Exp = out.pop().ok_or(SyntaxError{msg: String::from("Wrong number of function call arguments")})?;
@@ -362,6 +382,7 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
             Option::Some(
                 Token::FunctionCallOpen |
                 Token::RoundBracketOpen |
+                Token::ListSelectionOpen |
                 Token::SquareBracketOpen |
                 Token::CurlyBracketOpen |
                 Token::If |

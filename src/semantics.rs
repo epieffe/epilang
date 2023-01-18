@@ -1,4 +1,5 @@
 use crate::expression::Exp;
+use crate::parser::SyntaxError;
 use crate::value::{Value, StackValue, Function, V};
 
 pub struct Error {
@@ -38,6 +39,17 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
                 values.push(value)
             }
             Result::Ok(V::Val(Value::List(values)))
+        }
+
+        Exp::ListSelection(list, index) => {
+            let list: V = eval_expression(list, stack, stack_start)?;
+            let index: V = eval_expression(index, stack, stack_start)?;
+            let value = match (list.as_ref(), index.as_ref()) {
+                (Value::List(values), Value::Int(i)) => values.get(*i as usize)
+                    .ok_or(Error{msg: String::from("List index out of range")})?,
+                _ => return Result::Err(Error{msg: String::from("q")})
+            };
+            Result::Ok(V::Ptr(*value))
         }
 
         Exp::Assign(var, exp) => {

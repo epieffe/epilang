@@ -8,6 +8,8 @@ pub enum Exp {
     Var(Var),
     // List instantiation. Eg: [exp1, ... , expN]
     List(Vec<Exp>),
+    // List selection. Eg: exp[1]
+    ListSelection(Box<Exp>, Box<Exp>),
     // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
     // If then else. Eg: if exp {exp1} else {exp2}
