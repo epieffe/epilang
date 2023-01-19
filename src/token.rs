@@ -68,6 +68,28 @@ impl PartialEq for Token {
     }
 }
 
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::Operand(o) => write!(f, "{}", *o),
+            Token::Operator(o) => write!(f, "{}", *o),
+            Token::If => write!(f, "if"),
+            Token::Else => write!(f, "else"),
+            Token::Let => write!(f, "let"),
+            Token::Fn => write!(f, "fn"),
+            Token::FunctionCallOpen => write!(f, "("),
+            Token::ListSelectionOpen => write!(f, "["),
+            Token::RoundBracketOpen => write!(f, "("),
+            Token::RoundBracketClosed => write!(f, ")"),
+            Token::SquareBracketOpen => write!(f, "["),
+            Token::SquareBracketClosed => write!(f, "]"),
+            Token::CurlyBracketOpen => write!(f, "{{"),
+            Token::CurlyBracketClosed => write!(f, "}}"),
+            Token::Comma => write!(f, ","),
+        }
+    }
+}
+
 
 pub enum Operand {
     Null,
@@ -85,6 +107,18 @@ impl Operand {
             Operand::Bool(b) => Exp::Const(Const::Boolean(*b)),
             Operand::Str(s) => Exp::Const(Const::String(s.clone())),
             Operand::Var(_) => panic!("Never call to_exp() on variables because we need to know the scope to parse them correctly"),
+        }
+    }
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operand::Null => write!(f, "null"),
+            Operand::Int(i) => write!(f, "{}", *i),
+            Operand::Bool(b) => write!(f, "{}", *b),
+            Operand::Str(str) => write!(f, "{}", str),
+            Operand::Var(name) => write!(f, "{}", name)
         }
     }
 }

@@ -130,7 +130,24 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
                     _ => tokens.push(Token::Operator(Operator::Seq))
                 }
             },
-            Token::Comma => stack.push(Token::Comma),
+            Token::Comma => {
+                loop {
+                    match stack.last() {
+                        Option::Some(
+                            Token::SquareBracketOpen |
+                            Token::FunctionCallOpen |
+                            Token::Comma
+                        ) => break,
+                        Option::Some(Token::Operator(op)) => {
+                            push_operator_to_out(op, &mut out)?;
+                            stack.pop();
+                        },
+                        Option::Some(tkn) => return Result::Err(SyntaxError{msg: format!("Unexpected token {}", tkn)}),
+                        Option::None => return Result::Err(SyntaxError{msg: String::from("Unexpected token `,`",)})
+                    }
+                }
+                stack.push(Token::Comma)
+            },
         }
     }
 
@@ -395,10 +412,8 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
                 if o2.precedence() >= op.precedence() {
                     break
                 } else {
-                    match push_operator_to_out(o2, out) {
-                        Result::Ok(()) => stack.pop(),
-                        Result::Err(err) => return Result::Err(err)
-                    };
+                    push_operator_to_out(o2, out)?;
+                    stack.pop();
                 }
             },
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
