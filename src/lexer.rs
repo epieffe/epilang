@@ -2,7 +2,106 @@ use crate::token::Token;
 use crate::token::Operand;
 use crate::token::Operator;
 
-pub fn make_token(word: &String) -> Result<Token, ()> {
+pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
+    let mut tokens: Vec<Token> = Vec::new();
+    let mut buffer = String::from("");
+
+    let mut callable = false;
+
+    let mut chars = text.chars().peekable();
+    loop {
+        match chars.next() {
+            Option::None => break,
+
+            Option::Some(' ' | '\n' | '\t') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+            },
+
+            Option::Some('(') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token: Token = if callable {Token::FunctionCallOpen} else {Token::RoundBracketOpen};
+                callable = token.is_callable();
+                tokens.push(token)
+            }
+
+            Option::Some(c) if [
+                ';', ',', '+', '-', '*', '/', '[', ']', '{', '}', ')', '<', '>'
+            ].contains(&c) => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = make_token(&c.to_string())?;
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('=') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.peek() {
+                    Option::Some('=') => {
+                        chars.next();
+                        Token::Operator(Operator::Eq)
+                    },
+                    _ => Token::Operator(Operator::Assign)
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('!') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.peek() {
+                    Option::Some('=') => {
+                        chars.next();
+                        Token::Operator(Operator::Neq)
+                    },
+                    _ =>Token::Operator(Operator::Not)
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('&') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.next() {
+                    Option::Some('&') => {
+                        Token::Operator(Operator::And)
+                    },
+                    _ => return Result::Err(())
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('|') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.next() {
+                    Option::Some('|') => {
+                        Token::Operator(Operator::Or)
+                    },
+                    _ => return Result::Err(())
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some(c) => buffer.push(c)
+        }
+    };
+    flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+    tokens.reverse();
+    Result::Ok(tokens)
+}
+
+fn flush_buffer(buffer: &mut String, tokens: &mut Vec<Token>, callable: &mut bool) -> Result<(), ()> {
+    if !buffer.is_empty() {
+        let token: Token = make_token(&buffer)?;
+        buffer.clear();
+        *callable = token.is_callable();
+        tokens.push(token);
+    };
+    Result::Ok(())
+}
+
+fn make_token(word: &String) -> Result<Token, ()> {
     let token = match word.as_str() {
         "true" => Token::Operand(Operand::Bool(true)),
         "false" => Token::Operand(Operand::Bool(false)),
@@ -37,80 +136,4 @@ pub fn make_token(word: &String) -> Result<Token, ()> {
         }
     };
     Result::Ok(token)
-}
-
-
-
-pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
-    let mut tokens: Vec<Token> = Vec::new();
-    let mut token_buffer = String::from("");
-
-    for c in text.chars() {
-        match c {
-            ' ' | '\n' | '\t' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens)
-            }
-            ';' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Operator(Operator::Seq));
-            }
-            ',' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Comma);
-            }
-            '+' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Operator(Operator::Sum));
-            }
-            '-' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Operator(Operator::Sub));
-            }
-            '*' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Operator(Operator::Mul));
-            }
-            '\\' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::Operator(Operator::Div));
-            }
-            '(' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::RoundBracketOpen);
-            }
-            ')' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::RoundBracketClosed);
-            }
-            '[' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::SquareBracketOpen);
-            }
-            ']' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::SquareBracketClosed);
-            }
-            '{' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::CurlyBracketOpen);
-            }
-            '}' => {
-                flush_token_buffer(&mut token_buffer, &mut tokens);
-                tokens.push(Token::CurlyBracketClosed);
-            }
-            c => token_buffer.push(c)
-        }
-    }
-    
-    flush_token_buffer(&mut token_buffer, &mut tokens);
-    tokens.reverse();
-    Result::Ok(tokens)
-}
-
-
-fn flush_token_buffer(buffer: &mut String, tokens: &mut Vec<Token>) {
-    if buffer.len() > 0 {
-        tokens.push(make_token(buffer).unwrap());
-        buffer.clear();
-    }
 }
