@@ -52,11 +52,33 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
             Result::Ok(V::Ptr(*value))
         }
 
-        Exp::Assign(var, exp) => {
-            match eval_expression(exp, stack, stack_start)? {
-                V::Ptr(ptr) => stack[var.scope + stack_start] = ptr,
-                V::Val(value) => stack[var.scope + stack_start] = StackValue::from_box(Box::new(value))
-            };
+        Exp::Assign(left_exp, right_exp) => {
+            let right_value: V = eval_expression(right_exp, stack, stack_start)?;
+            match (*left_exp).as_ref() {
+                Exp::Var(var) => match right_value {
+                    V::Ptr(ptr) => stack[var.scope + stack_start] = ptr,
+                    V::Val(value) => stack[var.scope + stack_start] = StackValue::from_box(Box::new(value))
+                },
+                Exp::ListSelection(list, index) => {
+                    let mut list = eval_expression(list.as_ref(), stack, stack_start)?;
+                    let list: &mut Vec<StackValue> = match list.as_mut_ref() {
+                        Value::List(list) => list,
+                        _ => return Result::Err(Error{msg: String::from("Expected list value before list selection")})
+                    };
+                    let index: usize = match eval_expression(index.as_ref(), stack, stack_start)?.as_ref() {
+                        Value::Int(i) => *i as usize,
+                        _ => return Result::Err(Error{msg: String::from("Expected number in list selection")})
+                    };
+                    if index >= list.len() {
+                        return Result::Err(Error{msg: String::from("List index out of range")})
+                    }
+                    list[index] = match right_value {
+                        V::Ptr(ptr) => ptr,
+                        V::Val(value) => StackValue::from_box(Box::new(value))
+                    }
+                },
+                _ => return Result::Err(Error{msg: String::from("Invalid left-hand side in assignment")})
+            }
             Result::Ok(V::Ptr(StackValue::unit()))
         }
 

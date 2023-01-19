@@ -19,7 +19,7 @@ pub enum Exp {
     // Function call. Eg: exp(arg_1, ... , arg_n)
     FunctionCall(Box<Exp>, Vec<Exp>),
     // Eg: x = exp
-    Assign(Var, Box<Exp>),
+    Assign(Box<Exp>, Box<Exp>),
     // Eg: exp1; exp2
     Seq(Box<Exp>, Box<Exp>),
     // Eg: exp1 + exp2

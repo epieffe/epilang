@@ -442,7 +442,11 @@ fn push_let_expr_to_out(out: &mut Vec<Exp>, scope: usize) -> Result<(), SyntaxEr
     };
     match exp1 {
         // Case when variable is assigned during declaration
-        Exp::Assign(var, right_exp) => {
+        Exp::Assign(left_exp, right_exp) => {
+            let var = match *left_exp {
+                Exp::Var(var) => var,
+                _ => return Result::Err(SyntaxError{msg: String::from("Expecting variable name after let")})
+            };
             if var.scope != scope {
                 return Result::Err(SyntaxError{
                     msg: String::from(format!("Variable {} has scope {}, but was expecting scope {}", var.name, var.scope, scope))
@@ -475,11 +479,8 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxE
         },
         Operator::Assign => {
             if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
-            let (exp, var) = (out.pop().unwrap(), out.pop().unwrap());
-            match var {
-                Exp::Var(var) => out.push(Exp::Assign(var, Box::new(exp))),
-                _ => return Result::Err(SyntaxError{msg: String::from("Expected variable before assignment")})
-            }
+            let (right_exp, left_exp) = (out.pop().unwrap(), out.pop().unwrap());
+            out.push(Exp::Assign(Box::new(left_exp), Box::new(right_exp)))
         },
         Operator::Mul => {
             if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
