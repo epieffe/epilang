@@ -117,7 +117,7 @@ impl fmt::Display for Operand {
             Operand::Null => write!(f, "null"),
             Operand::Int(i) => write!(f, "{}", *i),
             Operand::Bool(b) => write!(f, "{}", *b),
-            Operand::Str(str) => write!(f, "{}", str),
+            Operand::Str(str) => write!(f, "\"{}\"", str),
             Operand::Var(name) => write!(f, "{}", name)
         }
     }

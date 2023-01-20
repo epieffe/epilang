@@ -34,7 +34,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             },
 
             Option::Some(c) if [
-                ';', ',', '+', '-', '*', '/', '[', ']', '{', '}', ')', '<', '>'
+                ';', ',', '+', '-', '*', '/', ']', '{', '}', ')', '<', '>'
             ].contains(&c) => {
                 flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
                 let token = make_token(&c.to_string())?;
@@ -90,6 +90,34 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                 };
                 callable = token.is_callable();
                 tokens.push(token)
+            },
+
+            Option::Some('"') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                loop {
+                    match chars.next() {
+                        Option::Some('"') => break,
+                        Option::Some('\\') => {
+                            match chars.peek() {
+                                Option::Some('n') => {
+                                    chars.next();
+                                    buffer.push('\n')
+                                }
+                                Option::Some('"') => {
+                                    chars.next();
+                                    buffer.push('"')
+                                },
+                                _ => buffer.push('\\')
+                            };
+                        }
+                        Option::Some(c) => buffer.push(c),
+                        Option::None => return Result::Err(())
+                    }
+                }
+                let token = Token::Operand(Operand::Str(buffer.clone()));
+                buffer.clear();
+                callable = token.is_callable();
+                tokens.push(token);
             },
 
             Option::Some(c) => buffer.push(c)
