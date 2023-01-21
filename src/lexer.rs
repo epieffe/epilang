@@ -177,6 +177,7 @@ fn make_token(word: &String) -> Result<Token, ()> {
         "/" => Token::Operator(Operator::Div),
         "let" => Token::Let,
         "fn" => Token::Fn,
+        "while" => Token::While,
         "if" => Token::If,
         "else" => Token:: Else,
         "(" => Token::RoundBracketOpen,

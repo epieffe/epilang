@@ -82,6 +82,20 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
             Result::Ok(V::Ptr(StackValue::unit()))
         }
 
+        Exp::While(guard, exp) => {
+            let condition = eval_expression(guard, stack, stack_start)?.as_bool();
+            if !condition {
+                Result::Ok(V::Val(Value::Unit))
+            } else {
+                loop {
+                    let v: V = eval_expression(exp, stack, stack_start)?;
+                    if !eval_expression(guard, stack, stack_start)?.as_bool() {
+                        break Result::Ok(v)
+                    }
+                }
+            }
+        }
+
         Exp::IfThenElse(condition, exp1, exp2) => {
             let is_true: bool = eval_expression(condition, stack, stack_start)?.as_bool();
             eval_expression(if is_true {exp1} else {exp2}, stack, stack_start)

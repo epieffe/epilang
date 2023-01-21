@@ -12,6 +12,8 @@ pub enum Exp {
     ListSelection(Box<Exp>, Box<Exp>),
     // Eg: let x = exp1; exp2
     Decl(Var, Box<Exp>, Box<Exp>),
+    // While loop. Eg: while (exp1) { exp2 }
+    While(Box<Exp>, Box<Exp>),
     // If then else. Eg: if exp {exp1} else {exp2}
     IfThenElse(Box<Exp>, Box<Exp>, Box<Exp>),
     // Function definition. Eg: fn (arg_1, .. arg_n) { body }

@@ -89,6 +89,8 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
 
             Token::SquareBracketClosed => handle_square_bracket_closed_token(&mut stack, &mut out, false)?,
 
+            Token::While => stack.push(Token::While),
+
             Token::If => stack.push(Token::If),
 
             Token::Else => stack.push(Token::Else),
@@ -172,6 +174,7 @@ pub fn parse_tokens(tokens: &mut Vec<Token>, function_stack: &mut Vec<FunctionSc
             Option::Some(Token::CurlyBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `{`")}),
             Option::Some(Token::SquareBracketOpen) => return Result::Err(SyntaxError{msg: String::from("Unexpected `[`")}),
             Option::Some(Token::CurlyBracketClosed) => return Result::Err(SyntaxError{msg: String::from("Unexpected `}`")}),
+            Option::Some(Token::While) => return Result::Err(SyntaxError{msg: String::from("Unexpected `while`")}),
             Option::Some(Token::If) => return Result::Err(SyntaxError{msg: String::from("Unexpected `if`")}),
             Option::Some(Token::Else) => return Result::Err(SyntaxError{msg: String::from("Unexpected `else`")}),
             Option::Some(Token::Comma) => return Result::Err(SyntaxError{msg: String::from("Unexpected `,`")}),
@@ -234,6 +237,7 @@ fn handle_square_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
             Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
+            Option::Some(Token::While) => panic!("Found While in parser operator stack"),
             Option::Some(Token::If) => panic!("Found If in parser operator stack"),
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack"),
         }
@@ -292,11 +296,20 @@ fn handle_curly_bracket_closed_token(stack: &mut Vec<Token>, out: &mut Vec<Exp>,
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
             Option::Some(Token::SquareBracketClosed) => return Result::Err(SyntaxError{msg: String::from("Found SquareBracketClosed in parser operator stack")}),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
+            Option::Some(Token::While) => panic!("Found While in parser operator stack"),
             Option::Some(Token::If) => panic!("Found If in parser operator stack"),
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack")
         }
     };
     match stack.last() {
+        // Check if this curly bracket closes a while scope
+        Option::Some(Token::While) => {
+            stack.pop();
+            if out.len() < 2 { return Result::Err(SyntaxError{msg: String::from("Malformed while")}) }
+            let while_body: Exp = out.pop().unwrap();
+            let guard: Exp = out.pop().unwrap();
+            out.push(Exp::While(Box::new(guard), Box::new(while_body)))
+        },
         // Check if this curly bracket closes an if scope
         Option::Some(Token::If) => {
             stack.pop();
@@ -370,6 +383,7 @@ fn handle_round_bracket_closed_token(tokens: &mut Vec<Token>, stack: &mut Vec<To
             Option::Some(Token::CurlyBracketClosed) => panic!("Found CurlyBracketClosed in parser operator stack"),
             Option::Some(Token::SquareBracketClosed) => panic!("Found SquareBracketClosed in parser operator stack"),
             Option::Some(Token::Operand(_)) => panic!("Found Operand in parser operator stack"),
+            Option::Some(Token::While) => panic!("Found While in parser operator stack"),
             Option::Some(Token::If) => panic!("Found If in parser operator stack"),
             Option::Some(Token::Else) => panic!("Found Else in parser operator stack")
         }
@@ -402,6 +416,7 @@ fn handle_operator_token(op: Operator, stack: &mut Vec<Token>, out: &mut Vec<Exp
                 Token::ListSelectionOpen |
                 Token::SquareBracketOpen |
                 Token::CurlyBracketOpen |
+                Token::While |
                 Token::If |
                 Token::Else |
                 Token::Let |

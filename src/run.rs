@@ -95,6 +95,7 @@ fn exp_to_string(exp: &Exp) -> String {
         Exp::And(e1, e2) => format!("{} && {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Or(e1, e2) => format!("{} || {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Not(e) => format!("!{}", exp_to_string(e)),
+        Exp::While(guard, exp) => format!("while {} {{ {} }}", exp_to_string(guard), exp_to_string(exp)),
         Exp::IfThenElse(e, e1, e2) => format!("if {} {{ {} }} else {{ {} }}", exp_to_string(e), exp_to_string(e1), exp_to_string(e2)),
         Exp::FunctionCall(e, args) => format!("{}({})", exp_to_string(e), args_to_string(args))
     }

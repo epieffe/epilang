@@ -5,6 +5,7 @@ use crate::expression::{Const, Exp};
 pub enum Token {
     Operand(Operand),
     Operator(Operator),
+    While,
     If,
     Else,
     Let,
@@ -31,6 +32,7 @@ impl Token {
             Token::RoundBracketClosed => true,
             Token::SquareBracketClosed => true,
             Token::Operator(_) => false,
+            Token::While => false,
             Token::If => false,
             Token::Else => false,
             Token::Let => false,
@@ -73,6 +75,7 @@ impl fmt::Display for Token {
         match self {
             Token::Operand(o) => write!(f, "{}", *o),
             Token::Operator(o) => write!(f, "{}", *o),
+            Token::While => write!(f, "while"),
             Token::If => write!(f, "if"),
             Token::Else => write!(f, "else"),
             Token::Let => write!(f, "let"),
