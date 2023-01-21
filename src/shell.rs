@@ -33,7 +33,7 @@ pub fn run_shell() {
         match rl.readline("epilang> ") {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                handle_user_input(line, &mut stack, &mut function_stack)
+                handle_user_input(line + "\n", &mut stack, &mut function_stack)
             },
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
