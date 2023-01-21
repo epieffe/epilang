@@ -185,7 +185,18 @@ fn double_eval(exp1: &Exp, exp2: &Exp, stack: &mut Vec<StackValue>, stack_start:
 fn sum(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 + i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+
+        (Value::List(l1), Value::List(l2)) => {
+            let mut list = l1.clone();
+            list.extend(l2);
+            Result::Ok(Value::List(list))
+        }
+
+        (Value::List(_), other) => return Result::Err(Error{msg: format!("cannot concatenate list to {}", other)}),
+
+        (other, Value::List(_)) => return Result::Err(Error{msg: format!("cannot concatenate {} to list", other)}),
+
+        (a, b) => Result::Ok(Value::Str(format!("{}{}", a, b))),
     }
 }
 
