@@ -99,9 +99,12 @@ impl fmt::Display for Value {
             Value::Fn(func) => write!(f, "{:?}", func),
             Value::List(list) => {
                 write!(f, "[")?;
-                for value in list {
-                    write!(f, "{},", value)?;
-                };
+                if list.len() > 0 {
+                    for i in 0..list.len() -1 {
+                        write!(f, "{}, ", list[i])?;
+                    };
+                    write!(f, "{}", list[list.len() - 1])?;
+                }
                 write!(f, "]")
             }
         }
