@@ -36,7 +36,7 @@ mod tests {
     use super::*;
 
     fn eval_program(text: String) -> Result<V, ()> {
-        let mut tokens: Vec<Token> = tokenize(text)?;
+        let mut tokens: Vec<Token> = tokenize(text).or(Result::Err(()))?;
     
         // Parse tokens to exp
         let exp: Exp = parse(&mut tokens).or(Result::Err(()))?;

@@ -64,7 +64,7 @@ fn handle_user_input(
     let mut tokens: Vec<Token> = match tokenize(line) {
         Result::Ok(tokens) => tokens,
         Result::Err(err) => {
-            println!("Syntax error during token parsing");
+            println!("Lexical error: {}", err.msg);
             return
         }
     };
