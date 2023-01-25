@@ -2,7 +2,11 @@ use crate::token::Token;
 use crate::token::Operand;
 use crate::token::Operator;
 
-pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
+pub struct LexicalError {
+    pub msg: String
+}
+
+pub fn tokenize(text: String) -> Result<Vec<Token>, LexicalError> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::from("");
 
@@ -74,7 +78,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                     Option::Some('&') => {
                         Token::Operator(Operator::And)
                     },
-                    _ => return Result::Err(())
+                    _ => return Result::Err(LexicalError { msg: String::from("Unexpected character `&`") })
                 };
                 callable = token.is_callable();
                 tokens.push(token)
@@ -86,7 +90,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                     Option::Some('|') => {
                         Token::Operator(Operator::Or)
                     },
-                    _ => return Result::Err(())
+                    _ => return Result::Err(LexicalError { msg: String::from("Unexpected character `|`") })
                 };
                 callable = token.is_callable();
                 tokens.push(token)
@@ -111,7 +115,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
                             };
                         }
                         Option::Some(c) => buffer.push(c),
-                        Option::None => return Result::Err(())
+                        Option::None => return Result::Err(LexicalError { msg: String::from("Unclosed string") })
                     }
                 }
                 let token = Token::Operand(Operand::Str(buffer.clone()));
@@ -123,10 +127,25 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
             Option::Some('/') => {
                 flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
                 match chars.next() {
-                    Option::Some('/') => {
+                    Option::Some('/') => { // single line comment
                         loop {
                             match chars.next() {
                                 Option::Some('\n') => break,
+                                _ => ()
+                            }
+                        }
+                    },
+                    Option::Some('*') => { /* multiline comment */
+                        loop {
+                            match chars.next() {
+                                Option::None => return Result::Err(LexicalError { msg: String::from("Unclosed comment") }),
+                                Option::Some('*') => {
+                                    match chars.next() {
+                                        Option::None => return Result::Err(LexicalError { msg: String::from("Unclosed comment") }),
+                                        Option::Some('/') => break,
+                                        _ => ()
+                                    }
+                                },
                                 _ => ()
                             }
                         }
@@ -147,7 +166,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, ()> {
     Result::Ok(tokens)
 }
 
-fn flush_buffer(buffer: &mut String, tokens: &mut Vec<Token>, callable: &mut bool) -> Result<(), ()> {
+fn flush_buffer(buffer: &mut String, tokens: &mut Vec<Token>, callable: &mut bool) -> Result<(), LexicalError> {
     if !buffer.is_empty() {
         let token: Token = make_token(&buffer)?;
         buffer.clear();
@@ -157,7 +176,7 @@ fn flush_buffer(buffer: &mut String, tokens: &mut Vec<Token>, callable: &mut boo
     Result::Ok(())
 }
 
-fn make_token(word: &String) -> Result<Token, ()> {
+fn make_token(word: &String) -> Result<Token, LexicalError> {
     let token = match word.as_str() {
         "true" => Token::Operand(Operand::Bool(true)),
         "false" => Token::Operand(Operand::Bool(false)),
