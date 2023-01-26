@@ -30,6 +30,8 @@ pub enum Exp {
     Sub(Box<Exp>, Box<Exp>),
     // Eg: exp1 * exp2
     Mul(Box<Exp>, Box<Exp>),
+    // Eg: exp1 * exp2
+    Mod(Box<Exp>, Box<Exp>),
     // Eg: exp1 / exp2
     Div(Box<Exp>, Box<Exp>),
     // Eg: exp1 < exp2

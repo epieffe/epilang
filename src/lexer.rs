@@ -38,7 +38,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, LexicalError> {
             },
 
             Option::Some(c) if [
-                ';', ',', '+', '-', '*', ']', '{', '}', ')'
+                ';', ',', '+', '-', '*', ']', '{', '}', ')', '%'
             ].contains(&c) => {
                 flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
                 let token = make_token(&c.to_string())?;
@@ -220,6 +220,7 @@ fn make_token(word: &String) -> Result<Token, LexicalError> {
         "-" => Token::Operator(Operator::Sub),
         "*" => Token::Operator(Operator::Mul),
         "/" => Token::Operator(Operator::Div),
+        "%" => Token::Operator(Operator::Mod),
         "let" => Token::Let,
         "fn" => Token::Fn,
         "while" => Token::While,

@@ -88,6 +88,7 @@ fn exp_to_string(exp: &Exp) -> String {
         Exp::Sub(e1, e2) => format!("{} - {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Mul(e1, e2) => format!("{} * {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Div(e1, e2) => format!("{} / {}", exp_to_string(e1), exp_to_string(e2)),
+        Exp::Mod(e1, e2) => format!("{} % {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Lt(e1, e2) => format!("{} < {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Lte(e1, e2) => format!("{} <= {}", exp_to_string(e1), exp_to_string(e2)),
         Exp::Gt(e1, e2) => format!("{} > {}", exp_to_string(e1), exp_to_string(e2)),

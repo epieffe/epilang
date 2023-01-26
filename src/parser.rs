@@ -522,6 +522,11 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxE
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Div(Box::new(o1), Box::new(o2)))
         },
+        Operator::Mod => {
+            if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
+            let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
+            out.push(Exp::Mod(Box::new(o1), Box::new(o2)))
+        },
         Operator::Sum => {
             if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());

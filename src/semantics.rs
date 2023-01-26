@@ -148,6 +148,11 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
             Result::Ok(V::Val(mul(val1.as_ref(), val2.as_ref())?))
         },
 
+        Exp::Mod(exp1, exp2) => {
+            let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
+            Result::Ok(V::Val(modulo(val1.as_ref(), val2.as_ref())?))
+        },
+
         Exp::Div(exp1, exp2) => {
             let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
             Result::Ok(V::Val(div(val1.as_ref(), val2.as_ref())?))
@@ -242,6 +247,13 @@ fn div(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 / i2)),
         _ => Result::Err(Error{msg: format!("Unsupported / operator for values {}, {}",val1, val2)})
+    }
+}
+
+fn modulo(val1: &Value, val2: &Value) -> Result<Value, Error> {
+    match (val1, val2) {
+        (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 % i2)),
+        _ => Result::Err(Error{msg: format!("Unsupported % operator for values {}, {}",val1, val2)})
     }
 }
 

@@ -142,7 +142,8 @@ pub enum Operator {
     Sum,
     Sub,
     Mul,
-    Div
+    Div,
+    Mod
 }
 
 impl Operator {
@@ -150,6 +151,7 @@ impl Operator {
         match self {
             Operator::Mul => 1,
             Operator::Div => 1,
+            Operator::Mod => 1,
             Operator::Sum => 2,
             Operator::Sub => 2,
             Operator::Not => 4,
@@ -172,6 +174,7 @@ impl fmt::Display for Operator {
         match self {
             Operator::Mul => write!(f, "{}","*"),
             Operator::Div => write!(f, "{}","/"),
+            Operator::Mod => write!(f, "{}","%"),
             Operator::Sum => write!(f, "{}","+"),
             Operator::Sub => write!(f, "{}","-"),
             Operator::Not => write!(f, "{}","!"),
