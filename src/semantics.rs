@@ -158,9 +158,19 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
             Result::Ok(V::Val(lt(val1.as_ref(), val2.as_ref())?))
         },
 
+        Exp::Lte(exp1, exp2) => {
+            let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
+            Result::Ok(V::Val(lte(val1.as_ref(), val2.as_ref())?))
+        },
+
         Exp::Gt(exp1, exp2) => {
             let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
             Result::Ok(V::Val(gt(val1.as_ref(), val2.as_ref())?))
+        },
+
+        Exp::Gte(exp1, exp2) => {
+            let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
+            Result::Ok(V::Val(gte(val1.as_ref(), val2.as_ref())?))
         },
 
         Exp::Eq(exp1, exp2) => {
@@ -217,35 +227,49 @@ fn sum(val1: &Value, val2: &Value) -> Result<Value, Error> {
 fn sub(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 - i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported - operator for values {}, {}",val1, val2)})
     }
 }
 
 fn mul(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 * i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported * operator for values {}, {}",val1, val2)})
     }
 }
 
 fn div(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Int(i1 / i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported / operator for values {}, {}",val1, val2)})
     }
 }
 
 fn lt(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 < i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported < operator for values {}, {}",val1, val2)})
+    }
+}
+
+fn lte(val1: &Value, val2: &Value) -> Result<Value, Error> {
+    match (val1, val2) {
+        (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 <= i2)),
+        _ => Result::Err(Error{msg: format!("Unsupported <= operator for values {}, {}",val1, val2)})
     }
 }
 
 fn gt(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 > i2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported > operator for values {}, {}",val1, val2)})
+    }
+}
+
+fn gte(val1: &Value, val2: &Value) -> Result<Value, Error> {
+    match (val1, val2) {
+        (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 >= i2)),
+        _ => Result::Err(Error{msg: format!("Unsupported >= operator for values {}, {}",val1, val2)})
     }
 }
 
@@ -253,7 +277,7 @@ fn eq(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 == i2)),
         (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(b1 == b2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported == operator for values {}, {}",val1, val2)})
     }
 }
 
@@ -261,20 +285,20 @@ fn neq(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Int(i1), Value::Int(i2)) => Result::Ok(Value::Bool(i1 != i2)),
         (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(b1 != b2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported != operator for values {}, {}",val1, val2)})
     }
 }
 
 fn and(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(*b1 && *b2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported && operator for values {}, {}",val1, val2)})
     }
 }
 
 fn or(val1: &Value, val2: &Value) -> Result<Value, Error> {
     match (val1, val2) {
         (Value::Bool(b1), Value::Bool(b2)) => Result::Ok(Value::Bool(*b1 || *b2)),
-        _ => Result::Err(Error{msg: format!("Unsupported + operator for values {}, {}",val1, val2)})
+        _ => Result::Err(Error{msg: format!("Unsupported || operator for values {}, {}",val1, val2)})
     }
 }

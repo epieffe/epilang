@@ -38,7 +38,7 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, LexicalError> {
             },
 
             Option::Some(c) if [
-                ';', ',', '+', '-', '*', ']', '{', '}', ')', '<', '>'
+                ';', ',', '+', '-', '*', ']', '{', '}', ')'
             ].contains(&c) => {
                 flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
                 let token = make_token(&c.to_string())?;
@@ -54,6 +54,32 @@ pub fn tokenize(text: String) -> Result<Vec<Token>, LexicalError> {
                         Token::Operator(Operator::Eq)
                     },
                     _ => Token::Operator(Operator::Assign)
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('>') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.peek() {
+                    Option::Some('=') => {
+                        chars.next();
+                        Token::Operator(Operator::Gte)
+                    },
+                    _ => Token::Operator(Operator::Gt)
+                };
+                callable = token.is_callable();
+                tokens.push(token)
+            },
+
+            Option::Some('<') => {
+                flush_buffer(&mut buffer, &mut tokens, &mut callable)?;
+                let token = match chars.peek() {
+                    Option::Some('=') => {
+                        chars.next();
+                        Token::Operator(Operator::Lte)
+                    },
+                    _ => Token::Operator(Operator::Lt)
                 };
                 callable = token.is_callable();
                 tokens.push(token)

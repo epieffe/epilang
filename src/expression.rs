@@ -34,8 +34,12 @@ pub enum Exp {
     Div(Box<Exp>, Box<Exp>),
     // Eg: exp1 < exp2
     Lt(Box<Exp>, Box<Exp>),
+    // Eg: exp1 <= exp2
+    Lte(Box<Exp>, Box<Exp>),
     // Eg: exp1 > exp2
     Gt(Box<Exp>, Box<Exp>),
+    // Eg: exp1 >= exp2
+    Gte(Box<Exp>, Box<Exp>),
     // Eg: exp1 == exp2
     Eq(Box<Exp>, Box<Exp>),
     // Eg: exp1 != exp2

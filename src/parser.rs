@@ -537,10 +537,20 @@ fn push_operator_to_out(op: &Operator, out: &mut Vec<Exp>) -> Result<(), SyntaxE
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Lt(Box::new(o1), Box::new(o2)))
         },
+        Operator::Lte => {
+            if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
+            let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
+            out.push(Exp::Lte(Box::new(o1), Box::new(o2)))
+        },
         Operator::Gt => {
             if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
             let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
             out.push(Exp::Gt(Box::new(o1), Box::new(o2)))
+        },
+        Operator::Gte => {
+            if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
+            let (o2, o1) = (out.pop().unwrap(), out.pop().unwrap());
+            out.push(Exp::Gte(Box::new(o1), Box::new(o2)))
         },
         Operator::Eq => {
             if out.len() < 2 { return Result::Err(SyntaxError{msg: format!("Unexpected operator {}", op)}) }
