@@ -189,13 +189,25 @@ pub fn eval_expression(exp: &Exp, stack: &mut Vec<StackValue>, stack_start: usiz
         },
 
         Exp::And(exp1, exp2) => {
-            let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
-            Result::Ok(V::Val(and(val1.as_ref(), val2.as_ref())?))
+            let val_exp1 = eval_expression(exp1, stack, stack_start)?;
+            if (!val_exp1.as_bool()) {
+                Result::Ok(V::Val(Value::Bool(false)))
+            }
+            else {
+                let val_exp2 = eval_expression(exp2, stack, stack_start)?;
+                Result::Ok(V::Val(Value::Bool(val_exp2.as_bool())))
+            }
         },
 
         Exp::Or(exp1, exp2) => {
-            let (val1, val2) = double_eval(exp1, exp2, stack, stack_start)?;
-            Result::Ok(V::Val(or(val1.as_ref(), val2.as_ref())?))
+            let val_exp1 = eval_expression(exp1, stack, stack_start)?;
+            if (val_exp1.as_bool()) {
+                Result::Ok(V::Val(Value::Bool(true)))
+            }
+            else {
+                let val_exp2 = eval_expression(exp2, stack, stack_start)?;
+                Result::Ok(V::Val(Value::Bool(val_exp2.as_bool())))
+            }
         },
 
         Exp::Not(exp1) => {
