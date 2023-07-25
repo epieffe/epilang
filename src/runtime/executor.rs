@@ -1,9 +1,5 @@
-use crate::ast::block::Block;
 use crate::ast::expression::{BinaryOpcode, Expr, UnaryOpcode};
-use crate::ast::program::Program;
-use crate::ast::statement::Statement;
 use crate::ast::value::Value;
-use crate::runtime::error::RuntimeError;
 use crate::runtime::frame::{Frame, VariableError};
 use crate::runtime::operations::{
     conjunction, disjunction, equals, greater, greater_equals, lower, lower_equals, not_equals,
@@ -17,14 +13,32 @@ pub enum ExpressionError {
     VariableError(String, VariableError),
     #[error("Unable to evalutate expression {0}: {1}")]
     OperationError(String, OperationError),
+    #[error("Variable {0} is not defined")]
+    UndefinedVariable(String),
+    #[error("Invalid left expression: {0}")]
+    InvalidLeftSideAssignment(String),
 }
 
-pub fn evalutate_expression(frame: &mut Frame, expr: &Expr) -> Result<Value, ExpressionError> {
+pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Frame), ExpressionError> {
     match expr {
-        Expr::Constant(n) => Ok(n.clone()),
+        Expr::Constant(n) => Ok((n.clone(), frame)),
+
+        Expr::Identifier(variable) => {
+            let value = frame
+                .variable_value(variable)
+                .map_err(|e| ExpressionError::VariableError(expr.to_string(), e))?;
+            Ok((value, frame))
+        },
+
+        Expr::Concatenation { left, right } => {
+            let (_, frame) = evalutate_expression(frame, left)?;
+            let (value, frame) = evalutate_expression(frame, right)?;
+            Ok((value, frame))
+        }
+
         Expr::BinaryOp(exp1, opcode, exp2) => {
-            let value_1 = evalutate_expression(frame, exp1)?;
-            let value_2 = evalutate_expression(frame, exp2)?;
+            let (value_1, frame) = evalutate_expression(frame, exp1)?;
+            let (value_2, frame) = evalutate_expression(frame, exp2)?;
             let result = match opcode {
                 BinaryOpcode::Mul => value_1 * value_2,
                 BinaryOpcode::Div => value_1 / value_2,
@@ -39,96 +53,53 @@ pub fn evalutate_expression(frame: &mut Frame, expr: &Expr) -> Result<Value, Exp
                 BinaryOpcode::Lower => lower(value_1, value_2),
                 BinaryOpcode::LowerEquals => lower_equals(value_1, value_2),
             };
-            result.map_err(|e| ExpressionError::OperationError(expr.to_string(), e))
+            let value = result.map_err(|e| ExpressionError::OperationError(expr.to_string(), e))?;
+            Ok((value, frame))
         }
-        Expr::Identifier(variable) => frame
-            .variable_value(variable)
-            .map_err(|e| ExpressionError::VariableError(expr.to_string(), e)),
+
         Expr::UnaryOp(op, exp) => {
-            let result = match op {
-                UnaryOpcode::Not => !evalutate_expression(frame, exp)?,
+            let (value, frame) = evalutate_expression(frame, exp)?;
+            let value = match op {
+                UnaryOpcode::Not => !value,
             };
-            result.map_err(|e| ExpressionError::OperationError(expr.to_string(), e))
+            Ok((value, frame))
+        }
+
+        Expr::Definition(identifier) => {
+            frame.define_variable(identifier.clone(), Value::Int(0));
+            Ok((Value::Int(0), frame))
+        }
+
+        Expr::Assignment(left , right) => {
+            match left.as_ref() {
+                Expr::Identifier(var) => {
+                    let (value, mut frame) = evalutate_expression(frame, right)?;
+                    frame.assign_value(&var, value)?;
+                    Ok((Value::Int(0), frame))
+                }
+                Expr::Definition(var) => {
+                    let (value, mut frame) = evalutate_expression(frame, right)?;
+                    frame.define_variable(var.clone(), value);
+                    Ok((Value::Int(0), frame))
+                }
+                _ => Err(ExpressionError::InvalidLeftSideAssignment(left.to_string()))
+            }
+        }
+
+        Expr::Block(exp) => {
+            let frame = Frame::new(Box::new(frame));
+            let (value, mut frame) = evalutate_expression(frame, exp)?;
+            Ok((value, *frame.take_parent().unwrap()))
+        }
+
+        Expr::Condition { exp, then_block, else_block } => {
+            let (condition, frame) = evalutate_expression(frame, exp)?;
+            let frame = Frame::new(Box::new(frame));
+            let branch = if condition.as_bool() { then_block } else { else_block };
+            let (value, mut frame) = evalutate_expression(frame, branch)?;
+            Ok((value, *frame.take_parent().unwrap()))
         }
     }
-}
-
-pub fn execute_condition(
-    mut frame: Frame,
-    expr: &Expr,
-    then_block: &[Statement],
-    else_block: &Option<Vec<Statement>>,
-) -> Result<Frame, RuntimeError> {
-    let value = evalutate_expression(&mut frame, expr)?;
-    if let Value::Bool(value) = value {
-        let mut block_frame = Frame::new(Box::new(frame));
-        if value {
-            block_frame = execute_statements(block_frame, then_block)?;
-        } else if let Some(else_block) = else_block {
-            block_frame = execute_statements(block_frame, else_block)?;
-        }
-        Ok(*block_frame.take_parent().unwrap())
-    } else {
-        Err(RuntimeError::NonBooleanCondition(
-            expr.to_string(),
-            (&value).into(),
-        ))
-    }
-}
-
-pub fn execute_block(frame: Frame, block: &Block) -> Result<Frame, RuntimeError> {
-    match block {
-        Block::StatementsBlock(statements) => {
-            let mut block_frame = Frame::new(Box::new(frame));
-            block_frame = execute_statements(block_frame, statements)?;
-            Ok(*block_frame.take_parent().unwrap())
-        }
-        Block::Condition {
-            expression,
-            then_block,
-            else_block,
-        } => execute_condition(frame, expression.as_ref(), then_block, else_block),
-    }
-}
-
-pub fn execute_statement(mut frame: Frame, statement: &Statement) -> Result<Frame, RuntimeError> {
-    match statement {
-        Statement::Assignment {
-            identifier,
-            expression,
-        } => {
-            let value = evalutate_expression(&mut frame, expression)?;
-            frame.assign_value(identifier, value)?;
-            Ok(frame)
-        }
-        Statement::Definition {
-            identifier,
-            expression,
-            value_type,
-        } => {
-            let value = evalutate_expression(&mut frame, expression)?;
-            frame.define_variable(identifier.clone(), value_type.clone(), value)?;
-            Ok(frame)
-        }
-        Statement::Block(block) => {
-            frame = execute_block(frame, block)?;
-            Ok(frame)
-        }
-    }
-}
-
-pub fn execute_statements(
-    mut frame: Frame,
-    statements: &[Statement],
-) -> Result<Frame, RuntimeError> {
-    for statement in statements {
-        frame = execute_statement(frame, statement)?;
-    }
-    Ok(frame)
-}
-
-pub fn execute_program(frame: Frame, program: &Program) -> Result<Frame, RuntimeError> {
-    execute_statements(frame, &program.statements)
 }
 
 #[cfg(test)]
@@ -172,7 +143,7 @@ mod test {
             .parse(expression)
             .expect("Unable to parse expression");
         let mut root_frame = Frame::default();
-        let value = evalutate_expression(&mut root_frame, parsed.as_ref()).unwrap();
+        let (value, frame) = evalutate_expression(root_frame, parsed.as_ref()).unwrap();
         assert_eq!(expected, value)
     }
 }

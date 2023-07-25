@@ -6,11 +6,11 @@ edition = "2018"
 
 
 [build-dependencies]
-lalrpop = { version = "0.19", features = ["lexer"] }
+lalrpop = { version = "0.20", features = ["lexer"] }
 
 [dependencies]
 clap = { version = "3.2", features = [ "derive" ]}
-lalrpop-util = "0.19"
+lalrpop-util = "0.20"
 regex = "1"
 thiserror = "1.0"
 

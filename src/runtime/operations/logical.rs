@@ -3,15 +3,10 @@ use crate::runtime::operations::OperationError;
 use std::ops::Not;
 
 impl Not for Value {
-    type Output = Result<Value, OperationError>;
+    type Output = Value;
 
-    fn not(self) -> Self::Output {
-        match self {
-            Value::Int(v) => Ok(Value::Int(!v)),
-            Value::Float(_) => unary_error!(Not, Float),
-            Value::String(_) => unary_error!(Not, String),
-            Value::Bool(v) => Ok(Value::Bool(!v)),
-        }
+    fn not(self) -> Value {
+        Value::Bool(!self.as_bool())
     }
 }
 

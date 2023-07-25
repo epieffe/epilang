@@ -9,6 +9,4 @@ pub enum RuntimeError {
     ExpressionError(#[from] ExpressionError),
     #[error("{0}")]
     VariableError(#[from] VariableError),
-    #[error("The result type of the {0} expression is not Bool, but {1}")]
-    NonBooleanCondition(String, Type),
 }

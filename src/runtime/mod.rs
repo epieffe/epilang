@@ -7,81 +7,81 @@ mod operations;
 mod test {
     use crate::ast::test::get_test_program;
     use crate::ast::value::Value;
-    use crate::runtime::executor::execute_program;
+    use crate::runtime::executor::evalutate_expression;
     use crate::runtime::frame::Frame;
     use rstest::*;
 
     #[test]
     pub fn test_simple_calculator() {
         let program = get_test_program("valid", "simple_calculator.lrlang");
-        let mut root_frame = Frame::default();
-        root_frame = execute_program(root_frame, &program).unwrap();
+        let frame = Frame::default();
+        let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
         assert_eq!(
-            root_frame.variable_value("my_variable").unwrap(),
+            frame.variable_value("my_variable").unwrap(),
             Value::Int(5)
         );
         assert_eq!(
-            root_frame.variable_value("my_variable_1").unwrap(),
+            frame.variable_value("my_variable_1").unwrap(),
             Value::Int(5)
         );
-        assert_eq!(root_frame.variable_value("sum").unwrap(), Value::Int(10));
-        assert_eq!(root_frame.variable_value("mult").unwrap(), Value::Int(1200));
-        assert_eq!(root_frame.variable_value("div").unwrap(), Value::Int(60));
+        assert_eq!(frame.variable_value("sum").unwrap(), Value::Int(10));
+        assert_eq!(frame.variable_value("mult").unwrap(), Value::Int(1200));
+        assert_eq!(frame.variable_value("div").unwrap(), Value::Int(60));
         assert_eq!(
-            root_frame.variable_value("expression").unwrap(),
+            frame.variable_value("expression").unwrap(),
             Value::Int(125)
         );
         assert_eq!(
-            root_frame.variable_value("float").unwrap(),
+            frame.variable_value("float").unwrap(),
             Value::Float(5.5)
         );
         assert_eq!(
-            root_frame.variable_value("float_plus_float").unwrap(),
+            frame.variable_value("float_plus_float").unwrap(),
             Value::Float(11.0)
         );
         assert_eq!(
-            root_frame.variable_value("float_plus_int").unwrap(),
+            frame.variable_value("float_plus_int").unwrap(),
             Value::Float(10.5)
         );
         assert_eq!(
-            root_frame.variable_value("int_plus_float").unwrap(),
+            frame.variable_value("int_plus_float").unwrap(),
             Value::Float(10.5)
         );
         assert_eq!(
-            root_frame.variable_value("float_minus_float").unwrap(),
+            frame.variable_value("float_minus_float").unwrap(),
             Value::Float(0.5)
         );
         assert_eq!(
-            root_frame.variable_value("float_minus_int").unwrap(),
+            frame.variable_value("float_minus_int").unwrap(),
             Value::Float(0.5)
         );
         assert_eq!(
-            root_frame.variable_value("int_minus_float").unwrap(),
+            frame.variable_value("int_minus_float").unwrap(),
             Value::Float(-0.5)
         );
         assert_eq!(
-            root_frame.variable_value("float_times_float").unwrap(),
+            frame.variable_value("float_times_float").unwrap(),
             Value::Float(11.0)
         );
         assert_eq!(
-            root_frame.variable_value("float_times_int").unwrap(),
+            frame.variable_value("float_times_int").unwrap(),
             Value::Float(11.0)
         );
         assert_eq!(
-            root_frame.variable_value("int_times_float").unwrap(),
+            frame.variable_value("int_times_float").unwrap(),
             Value::Float(11.0)
         );
         assert_eq!(
-            root_frame.variable_value("float_div_float").unwrap(),
+            frame.variable_value("float_div_float").unwrap(),
             Value::Float(1.1)
         );
         assert_eq!(
-            root_frame.variable_value("float_div_int").unwrap(),
+            frame.variable_value("float_div_int").unwrap(),
             Value::Float(1.1)
         );
         assert_eq!(
-            root_frame.variable_value("int_div_float").unwrap(),
+            frame.variable_value("int_div_float").unwrap(),
             Value::Float(1.1)
         );
     }
@@ -89,62 +89,62 @@ mod test {
     #[test]
     pub fn test_string_operations() {
         let program = get_test_program("valid", "string_operations.lrlang");
-        let mut root_frame = Frame::default();
-        root_frame = execute_program(root_frame, &program).unwrap();
+        let frame = Frame::default();
+        let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
         assert_eq!(
-            root_frame.variable_value("string").unwrap(),
+            frame.variable_value("string").unwrap(),
             Value::String("100".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_concat_1").unwrap(),
+            frame.variable_value("string_concat_1").unwrap(),
             Value::String("abc100".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_concat_2").unwrap(),
+            frame.variable_value("string_concat_2").unwrap(),
             Value::String("100100".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_concat_3").unwrap(),
+            frame.variable_value("string_concat_3").unwrap(),
             Value::String("100 abc".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_concat_4").unwrap(),
+            frame.variable_value("string_concat_4").unwrap(),
             Value::String("abcefg".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_plus_int").unwrap(),
+            frame.variable_value("string_plus_int").unwrap(),
             Value::String("int=5".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_plus_float").unwrap(),
+            frame.variable_value("string_plus_float").unwrap(),
             Value::String("float=5.5".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_plus_int_var").unwrap(),
+            frame.variable_value("string_plus_int_var").unwrap(),
             Value::String("int=5".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("string_plus_float_var").unwrap(),
+            frame.variable_value("string_plus_float_var").unwrap(),
             Value::String("float=5.5".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("redefine").unwrap(),
+            frame.variable_value("redefine").unwrap(),
             Value::String("new_value".to_owned())
         );
     }
     #[test]
     pub fn test_circle_square() {
         let program = get_test_program("valid", "circle_square.lrlang");
-        let mut root_frame = Frame::default();
-        root_frame = execute_program(root_frame, &program).unwrap();
+        let frame = Frame::default();
+        let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
         assert_eq!(
-            root_frame.variable_value("hello_world").unwrap(),
+            frame.variable_value("hello_world").unwrap(),
             Value::String("Hello World".to_owned())
         );
         assert_eq!(
-            root_frame.variable_value("value").unwrap(),
+            frame.variable_value("value").unwrap(),
             Value::String(
                 "The square of the circle with the r = 5 is 157. It is > 100. It is <= 200."
                     .to_owned()
@@ -175,8 +175,8 @@ mod test {
     )]
     pub fn test_runtime_error(#[case] file: &str, #[case] expected_error: &str) {
         let program = get_test_program("runtime_error", &format!("{}.lrlang", file));
-        let root_frame = Frame::default();
-        let result = execute_program(root_frame, &program);
+        let frame = Frame::default();
+        let result = evalutate_expression(frame, &program);
         assert!(result.is_err());
         let error = result.err().unwrap().to_string();
         assert_eq!(expected_error, error);
@@ -185,21 +185,21 @@ mod test {
     #[test]
     pub fn test_simple_blocks() {
         let program = get_test_program("valid", "simple_blocks.lrlang");
-        let mut root_frame = Frame::default();
-        root_frame = execute_program(root_frame, &program).unwrap();
+        let frame = Frame::default();
+        let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
-        assert_eq!(root_frame.variable_value("var_1").unwrap(), Value::Int(7));
-        assert_eq!(root_frame.variable_value("result").unwrap(), Value::Int(13));
-        assert!(root_frame.variable_value("var_2").is_err())
+        assert_eq!(frame.variable_value("var_1").unwrap(), Value::Int(7));
+        assert_eq!(frame.variable_value("result").unwrap(), Value::Int(13));
+        assert!(frame.variable_value("var_2").is_err())
     }
 
     #[test]
     pub fn test_if_blocks() {
         let program = get_test_program("valid", "if_blocks.lrlang");
-        let mut root_frame = Frame::default();
-        root_frame = execute_program(root_frame, &program).unwrap();
+        let frame = Frame::default();
+        let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
-        assert_eq!(root_frame.variable_value("var_1").unwrap(), Value::Int(7));
-        assert!(root_frame.variable_value("var_2").is_err());
+        assert_eq!(frame.variable_value("var_1").unwrap(), Value::Int(7));
+        assert!(frame.variable_value("var_2").is_err());
     }
 }

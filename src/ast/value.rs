@@ -27,6 +27,18 @@ pub enum Value {
     Bool(bool),
 }
 
+impl Value {
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Value::Bool(v) => !v,
+            Value::Int(0) => false,
+            Value::Int(_) => true,
+            Value::Float(f) => *f != 0.0,
+            Value::String(s) => !s.is_empty(),
+        }
+    }
+}
+
 impl From<&Value> for Type {
     fn from(value: &Value) -> Self {
         match value {

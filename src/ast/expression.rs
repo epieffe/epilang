@@ -5,8 +5,13 @@ use std::fmt::{Display, Formatter};
 pub enum Expr {
     Constant(Value),
     Identifier(String),
+    Concatenation { left: Box<Expr>, right: Box<Expr> },
     BinaryOp(Box<Expr>, BinaryOpcode, Box<Expr>),
     UnaryOp(UnaryOpcode, Box<Expr>),
+    Definition(String),
+    Assignment(Box<Expr>, Box<Expr>),
+    Block(Box<Expr>),
+    Condition { exp: Box<Expr>, then_block: Box<Expr>, else_block: Box<Expr> },
 }
 
 impl Display for Expr {
@@ -14,8 +19,15 @@ impl Display for Expr {
         match self {
             Expr::Constant(v) => write!(f, "{}", v),
             Expr::Identifier(id) => write!(f, "{}", id),
+            Expr::Concatenation { left, right } => write!(f, "({}; {})", left, right),
             Expr::BinaryOp(e1, op, e2) => write!(f, "({} {} {})", e1, op, e2),
             Expr::UnaryOp(op, e) => write!(f, "({}{})", op, e),
+            Expr::Definition(var) => write!(f, "(let {})", var),
+            Expr::Assignment(var, e) => write!(f, "({} = {})", var, e),
+            Expr::Block(e) => write!(f, "({{{}}})", e),
+            Expr::Condition{ exp, then_block, else_block } => {
+                write!(f, "(if {} {{{}}} else {{{}}})", exp, then_block, else_block)
+            },
         }
     }
 }
