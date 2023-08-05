@@ -1,4 +1,4 @@
-use crate::ast::value::Type;
+use crate::compiler::value::Type;
 use crate::runtime::executor::ExpressionError;
 use crate::runtime::frame::VariableError;
 use thiserror::Error;

@@ -1,4 +1,4 @@
-use crate::ast::value::Value;
+use crate::compiler::value::Value;
 use std::fmt::{Display, Formatter};
 
 #[derive(PartialEq, Debug)]
@@ -82,7 +82,7 @@ impl Display for UnaryOpcode {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::lr_lang;
+    use crate::compiler::lr_lang;
     use rstest::*;
 
     #[rstest]

@@ -1,12 +1,12 @@
-pub mod expression;
+pub mod ast;
 pub mod value;
 
 lalrpop_mod!(#[allow(clippy::all)] #[allow(dead_code)] pub lr_lang); // synthesized by LALRPOP
 
 #[cfg(test)]
 pub mod test {
-    use crate::ast::lr_lang;
-    use crate::ast::expression::Expr;
+    use crate::compiler::lr_lang;
+    use crate::compiler::ast::Expr;
     use std::fs;
     use std::path::Path;
 

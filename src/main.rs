@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate lalrpop_util;
 
-mod ast;
+mod compiler;
 mod runtime;
 
 use crate::runtime::executor::evalutate_expression;
@@ -23,7 +23,7 @@ fn main() {
     let program_text = fs::read_to_string(args.program_file)
         .expect("Unable to read the program file");
 
-    let program = ast::lr_lang::ExprParser::new()
+    let program = compiler::lr_lang::ExprParser::new()
         .parse(&program_text)
         .expect("Unable to parse the program file");
 

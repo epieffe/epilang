@@ -5,8 +5,8 @@ mod operations;
 
 #[cfg(test)]
 mod test {
-    use crate::ast::test::get_test_program;
-    use crate::ast::value::Value;
+    use crate::compiler::test::get_test_program;
+    use crate::compiler::value::Value;
     use crate::runtime::executor::evalutate_expression;
     use crate::runtime::frame::Frame;
     use rstest::*;

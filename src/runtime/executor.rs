@@ -1,5 +1,5 @@
-use crate::ast::expression::{BinaryOpcode, Expr, UnaryOpcode};
-use crate::ast::value::Value;
+use crate::compiler::ast::{BinaryOpcode, Expr, UnaryOpcode};
+use crate::compiler::value::Value;
 use crate::runtime::frame::{Frame, VariableError};
 use crate::runtime::operations::{
     conjunction, disjunction, equals, greater, greater_equals, lower, lower_equals, not_equals,
@@ -104,8 +104,8 @@ pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Fra
 
 #[cfg(test)]
 mod test {
-    use crate::ast::lr_lang;
-    use crate::ast::value::Value;
+    use crate::compiler::lr_lang;
+    use crate::compiler::value::Value;
     use crate::runtime::executor::evalutate_expression;
     use crate::Frame;
     use rstest::*;

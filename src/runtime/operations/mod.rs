@@ -1,5 +1,5 @@
-use crate::ast::expression::{BinaryOpcode, UnaryOpcode};
-use crate::ast::value::Type;
+use crate::compiler::ast::{BinaryOpcode, UnaryOpcode};
+use crate::compiler::value::Type;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -22,17 +22,17 @@ macro_rules! unary_error {
 macro_rules! error {
     ($type_1:ident, $op:ident, $type_2:ident) => {
         Err(OperationError::IncompatibleTypes(
-            crate::ast::value::Type::$type_1,
-            crate::ast::expression::BinaryOpcode::$op,
-            crate::ast::value::Type::$type_2,
+            crate::compiler::value::Type::$type_1,
+            crate::compiler::ast::BinaryOpcode::$op,
+            crate::compiler::value::Type::$type_2,
         ))
     };
 }
 macro_rules! error_other {
     ($type_1:ident, $op:ident, $other:ident) => {
         Err(OperationError::IncompatibleTypes(
-            crate::ast::value::Type::$type_1,
-            crate::ast::expression::BinaryOpcode::$op,
+            crate::compiler::value::Type::$type_1,
+            crate::compiler::ast::BinaryOpcode::$op,
             (&$other).into(),
         ))
     };

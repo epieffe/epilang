@@ -1,5 +1,5 @@
-use crate::ast::expression::{Expr, BinaryOpcode, UnaryOpcode};
-use crate::ast::value::Value;
+use crate::compiler::ast::{Expr, BinaryOpcode, UnaryOpcode};
+use crate::compiler::value::Value;
 
 use std::str::FromStr;
 
