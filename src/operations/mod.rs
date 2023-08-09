@@ -1,5 +1,6 @@
-use crate::compiler::ast::{BinaryOpcode, UnaryOpcode};
-use crate::compiler::value::Type;
+use crate::intermediate::opcode::BinaryOpcode;
+use crate::intermediate::opcode::UnaryOpcode;
+use crate::intermediate::constant::Type;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,29 +11,21 @@ pub enum OperationError {
     IncompatibleType(UnaryOpcode, Type),
 }
 
-macro_rules! unary_error {
-    ($op:ident, $type_:ident) => {
-        Err(OperationError::IncompatibleType(
-            crate::ast::expression::UnaryOpcode::$op,
-            crate::ast::value::Type::$type_,
+macro_rules! error {
+    ($type_1:ident, $op:ident, $type_2:ident) => {
+        Err(OperationError::IncompatibleTypes(
+            crate::intermediate::constant::Type::$type_1,
+            crate::intermediate::opcode::BinaryOpcode::$op,
+            crate::intermediate::constant::Type::$type_2,
         ))
     };
 }
 
-macro_rules! error {
-    ($type_1:ident, $op:ident, $type_2:ident) => {
-        Err(OperationError::IncompatibleTypes(
-            crate::compiler::value::Type::$type_1,
-            crate::compiler::ast::BinaryOpcode::$op,
-            crate::compiler::value::Type::$type_2,
-        ))
-    };
-}
 macro_rules! error_other {
     ($type_1:ident, $op:ident, $other:ident) => {
         Err(OperationError::IncompatibleTypes(
-            crate::compiler::value::Type::$type_1,
-            crate::compiler::ast::BinaryOpcode::$op,
+            crate::intermediate::constant::Type::$type_1,
+            crate::intermediate::opcode::BinaryOpcode::$op,
             (&$other).into(),
         ))
     };

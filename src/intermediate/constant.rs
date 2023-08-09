@@ -20,42 +20,42 @@ impl Display for Type {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Value {
+pub enum Constant {
     Int(i32),
     Float(f32),
     String(String),
     Bool(bool),
 }
 
-impl Value {
+impl Constant {
     pub fn as_bool(&self) -> bool {
         match self {
-            Value::Bool(v) => !v,
-            Value::Int(i) => *i != 0,
-            Value::Float(f) => *f != 0.0,
-            Value::String(s) => !s.is_empty(),
+            Constant::Bool(v) => !v,
+            Constant::Int(i) => *i != 0,
+            Constant::Float(f) => *f != 0.0,
+            Constant::String(s) => !s.is_empty(),
         }
     }
 }
 
-impl From<&Value> for Type {
-    fn from(value: &Value) -> Self {
+impl From<&Constant> for Type {
+    fn from(value: &Constant) -> Self {
         match value {
-            Value::Int(_) => Self::Int,
-            Value::Float(_) => Self::Float,
-            Value::String(_) => Self::String,
-            Value::Bool(_) => Self::Bool,
+            Constant::Int(_) => Self::Int,
+            Constant::Float(_) => Self::Float,
+            Constant::String(_) => Self::String,
+            Constant::Bool(_) => Self::Bool,
         }
     }
 }
 
-impl Display for Value {
+impl Display for Constant {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Int(v) => write!(f, "{}", v),
-            Value::Float(v) => write!(f, "{}", v),
-            Value::String(v) => write!(f, "\"{}\"", v),
-            Value::Bool(v) => write!(f, "{}", v),
+            Constant::Int(v) => write!(f, "{}", v),
+            Constant::Float(v) => write!(f, "{}", v),
+            Constant::String(v) => write!(f, "\"{}\"", v),
+            Constant::Bool(v) => write!(f, "{}", v),
         }
     }
 }

@@ -1,35 +1,36 @@
-use crate::compiler::ast::{Expr, BinaryOpcode, UnaryOpcode};
-use crate::compiler::value::Value;
+use crate::compiler::ast::AST;
+use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
+use crate::intermediate::constant::Constant;
 
 use std::str::FromStr;
 
 grammar;
 
-pub Expr: Box<Expr> = {
-    <left:Expr> ";" <right:Assignment> => Box::new(Expr::Concatenation{ left: left, right: right }),
+pub AST: Box<AST> = {
+    <left:AST> ";" <right:Assignment> => Box::new(AST::Concatenation{ left: left, right: right }),
     Assignment,
 }
 
-Term: Box<Expr> = {
-    "let" <Identifier> => Box::new(Expr::Definition(<>)),
-    "if" <exp:Expr> "{" <thn:Expr> "}" => Box::new(Expr::Condition{ exp: exp, then_block: thn, else_block: Box::new(Expr::Constant(Value::Int(0))) }),
-    "if" <exp:Expr> "{" <thn:Expr> "}" "else" "{" <els:Expr> "}" => Box::new(Expr::Condition{ exp: exp, then_block: thn, else_block: els }),
-    "{" <Expr> "}" => Box::new(Expr::Block(<>)),
-    "(" <Expr> ")" => Box::new(Expr::Block(<>)),
-    IntNum => Box::new(Expr::Constant(Value::Int(<>))),
-    FloatNum => Box::new(Expr::Constant(Value::Float(<>))),
-    StringLiteral => Box::new(Expr::Constant(Value::String(<>))),
-    BoolLiteral => Box::new(Expr::Constant(Value::Bool(<>))),
-    Identifier => Box::new(Expr::Identifier(<>)),
+Term: Box<AST> = {
+    "let" <Identifier> => Box::new(AST::Definition(<>)),
+    "if" <exp:AST> "{" <thn:AST> "}" => Box::new(AST::Condition{ exp: exp, then_block: thn, else_block: Box::new(AST::Constant(Constant::Int(0))) }),
+    "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => Box::new(AST::Condition{ exp: exp, then_block: thn, else_block: els }),
+    "{" <AST> "}" => Box::new(AST::Block(<>)),
+    "(" <AST> ")" => Box::new(AST::Block(<>)),
+    IntNum => Box::new(AST::Constant(Constant::Int(<>))),
+    FloatNum => Box::new(AST::Constant(Constant::Float(<>))),
+    StringLiteral => Box::new(AST::Constant(Constant::String(<>))),
+    BoolLiteral => Box::new(AST::Constant(Constant::Bool(<>))),
+    Identifier => Box::new(AST::Identifier(<>)),
 }
 
-Assignment: Box<Expr> = {
-    <Assignment> "=" <Disjunction> => Box::new(Expr::Assignment(<>)),
+Assignment: Box<AST> = {
+    <Assignment> "=" <Disjunction> => Box::new(AST::Assignment(<>)),
     Disjunction
 }
 
-Disjunction: Box<Expr> = {
-    Disjunction DisjOp Conjunction => Box::new(Expr::BinaryOp(<>)),
+Disjunction: Box<AST> = {
+    Disjunction DisjOp Conjunction => Box::new(AST::BinaryOp(<>)),
     Conjunction,
 }
 
@@ -37,8 +38,8 @@ DisjOp: BinaryOpcode = {
     "||" => BinaryOpcode::Disj,
 }
 
-Conjunction: Box<Expr> = {
-    Conjunction ConjOp Comparison => Box::new(Expr::BinaryOp(<>)),
+Conjunction: Box<AST> = {
+    Conjunction ConjOp Comparison => Box::new(AST::BinaryOp(<>)),
     Comparison,
 }
 
@@ -46,8 +47,8 @@ ConjOp: BinaryOpcode = {
     "&&" => BinaryOpcode::Conj,
 }
 
-Comparison: Box<Expr> = {
-    Comparison CompareOp Summ => Box::new(Expr::BinaryOp(<>)),
+Comparison: Box<AST> = {
+    Comparison CompareOp Summ => Box::new(AST::BinaryOp(<>)),
     Summ,
 }
 
@@ -60,8 +61,8 @@ CompareOp: BinaryOpcode = {
     ">=" => BinaryOpcode::GreaterEquals,
 }
 
-Summ: Box<Expr> = {
-    Summ SummOp Factor => Box::new(Expr::BinaryOp(<>)),
+Summ: Box<AST> = {
+    Summ SummOp Factor => Box::new(AST::BinaryOp(<>)),
     Factor,
 }
 
@@ -70,8 +71,8 @@ SummOp: BinaryOpcode = {
     "-" => BinaryOpcode::Sub,
 }
 
-Factor: Box<Expr> = {
-    Factor FactorOp UnaryResult => Box::new(Expr::BinaryOp(<>)),
+Factor: Box<AST> = {
+    Factor FactorOp UnaryResult => Box::new(AST::BinaryOp(<>)),
     UnaryResult,
 }
 
@@ -80,8 +81,8 @@ FactorOp: BinaryOpcode = {
     "/" => BinaryOpcode::Div,
 }
 
-UnaryResult: Box<Expr> = {
-    UnaryOp Term => Box::new(Expr::UnaryOp(<>)),
+UnaryResult: Box<AST> = {
+    UnaryOp Term => Box::new(AST::UnaryOp(<>)),
     Term,
 }
 

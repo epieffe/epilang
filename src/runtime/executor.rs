@@ -1,7 +1,9 @@
-use crate::compiler::ast::{BinaryOpcode, Expr, UnaryOpcode};
-use crate::compiler::value::Value;
+use crate::compiler::ast::{AST};
+use crate::intermediate::constant::Constant;
+use crate::intermediate::opcode::BinaryOpcode;
+use crate::intermediate::opcode::UnaryOpcode;
 use crate::runtime::frame::{Frame, VariableError};
-use crate::runtime::operations::{
+use crate::operations::{
     conjunction, disjunction, equals, greater, greater_equals, lower, lower_equals, not_equals,
     OperationError,
 };
@@ -19,24 +21,24 @@ pub enum ExpressionError {
     InvalidLeftSideAssignment(String),
 }
 
-pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Frame), ExpressionError> {
+pub fn evalutate_expression(mut frame: Frame, expr: &AST) -> Result<(Constant, Frame), ExpressionError> {
     match expr {
-        Expr::Constant(n) => Ok((n.clone(), frame)),
+        AST::Constant(n) => Ok((n.clone(), frame)),
 
-        Expr::Identifier(variable) => {
+        AST::Identifier(variable) => {
             let value = frame
                 .variable_value(variable)
                 .map_err(|e| ExpressionError::VariableError(expr.to_string(), e))?;
             Ok((value, frame))
         },
 
-        Expr::Concatenation { left, right } => {
+        AST::Concatenation { left, right } => {
             let (_, frame) = evalutate_expression(frame, left)?;
             let (value, frame) = evalutate_expression(frame, right)?;
             Ok((value, frame))
         }
 
-        Expr::BinaryOp(exp1, opcode, exp2) => {
+        AST::BinaryOp(exp1, opcode, exp2) => {
             let (value_1, frame) = evalutate_expression(frame, exp1)?;
             let (value_2, frame) = evalutate_expression(frame, exp2)?;
             let result = match opcode {
@@ -57,7 +59,7 @@ pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Fra
             Ok((value, frame))
         }
 
-        Expr::UnaryOp(op, exp) => {
+        AST::UnaryOp(op, exp) => {
             let (value, frame) = evalutate_expression(frame, exp)?;
             let value = match op {
                 UnaryOpcode::Not => !value,
@@ -65,34 +67,34 @@ pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Fra
             Ok((value, frame))
         }
 
-        Expr::Definition(identifier) => {
-            frame.define_variable(identifier.clone(), Value::Int(0));
-            Ok((Value::Int(0), frame))
+        AST::Definition(identifier) => {
+            frame.define_variable(identifier.clone(), Constant::Int(0));
+            Ok((Constant::Int(0), frame))
         }
 
-        Expr::Assignment(left , right) => {
+        AST::Assignment(left , right) => {
             match left.as_ref() {
-                Expr::Identifier(var) => {
+                AST::Identifier(var) => {
                     let (value, mut frame) = evalutate_expression(frame, right)?;
                     frame.assign_value(&var, value)?;
-                    Ok((Value::Int(0), frame))
+                    Ok((Constant::Int(0), frame))
                 }
-                Expr::Definition(var) => {
+                AST::Definition(var) => {
                     let (value, mut frame) = evalutate_expression(frame, right)?;
                     frame.define_variable(var.clone(), value);
-                    Ok((Value::Int(0), frame))
+                    Ok((Constant::Int(0), frame))
                 }
                 _ => Err(ExpressionError::InvalidLeftSideAssignment(left.to_string()))
             }
         }
 
-        Expr::Block(exp) => {
+        AST::Block(exp) => {
             let frame = Frame::new(Box::new(frame));
             let (value, mut frame) = evalutate_expression(frame, exp)?;
             Ok((value, *frame.take_parent().unwrap()))
         }
 
-        Expr::Condition { exp, then_block, else_block } => {
+        AST::Condition { exp, then_block, else_block } => {
             let (condition, frame) = evalutate_expression(frame, exp)?;
             let frame = Frame::new(Box::new(frame));
             let branch = if condition.as_bool() { then_block } else { else_block };
@@ -105,40 +107,40 @@ pub fn evalutate_expression(mut frame: Frame, expr: &Expr) -> Result<(Value, Fra
 #[cfg(test)]
 mod test {
     use crate::compiler::lr_lang;
-    use crate::compiler::value::Value;
+    use crate::intermediate::constant::Constant;
     use crate::runtime::executor::evalutate_expression;
     use crate::Frame;
     use rstest::*;
 
     #[rstest]
-    #[case("1 + 2 * 3 - 4", Value::Int(3))]
-    #[case("!0", Value::Int(-1))]
-    #[case("!-1", Value::Int(0))]
-    #[case("(1 + 2) * (3 - 4)", Value::Int(-3))]
-    #[case("true || false", Value::Bool(true))]
-    #[case("true && false", Value::Bool(false))]
-    #[case("!false", Value::Bool(true))]
-    #[case("!true", Value::Bool(false))]
-    #[case("2 < 3", Value::Bool(true))]
-    #[case("2 <= 3", Value::Bool(true))]
-    #[case("2 <= 3", Value::Bool(true))]
-    #[case("2 >= 2", Value::Bool(true))]
-    #[case("2 >= 1", Value::Bool(true))]
-    #[case("2 == 2", Value::Bool(true))]
-    #[case("2 != 2", Value::Bool(false))]
-    #[case("2 != 3", Value::Bool(true))]
-    #[case("\"abc\" == \"abc\"", Value::Bool(true))]
-    #[case("\"abc\" < \"xyz\"", Value::Bool(true))]
-    #[case("\"abc\" <= \"xyz\"", Value::Bool(true))]
-    #[case("\"abc\" >= \"xyz\"", Value::Bool(false))]
-    #[case("true && false || true || true && false", Value::Bool(true))]
-    #[case("true && (false || true || true) && false", Value::Bool(false))]
-    #[case("\"abc \" + 5.5", Value::String("abc 5.5".to_owned()))]
-    #[case("2 == 2 && 3 == 3", Value::Bool(true))]
-    #[case("100 * 2 == 200 && 120 > 120 - 1", Value::Bool(true))]
-    #[case("100 * 2 < 200 || 120 <= 120 - 1", Value::Bool(false))]
-    #[case("!(100 * 2 < 200) && !(120 <= 120 - 1)", Value::Bool(true))]
-    fn test_evalutate_expression(#[case] expression: &str, #[case] expected: Value) {
+    #[case("1 + 2 * 3 - 4", Constant::Int(3))]
+    #[case("!0", Constant::Int(-1))]
+    #[case("!-1", Constant::Int(0))]
+    #[case("(1 + 2) * (3 - 4)", Constant::Int(-3))]
+    #[case("true || false", Constant::Bool(true))]
+    #[case("true && false", Constant::Bool(false))]
+    #[case("!false", Constant::Bool(true))]
+    #[case("!true", Constant::Bool(false))]
+    #[case("2 < 3", Constant::Bool(true))]
+    #[case("2 <= 3", Constant::Bool(true))]
+    #[case("2 <= 3", Constant::Bool(true))]
+    #[case("2 >= 2", Constant::Bool(true))]
+    #[case("2 >= 1", Constant::Bool(true))]
+    #[case("2 == 2", Constant::Bool(true))]
+    #[case("2 != 2", Constant::Bool(false))]
+    #[case("2 != 3", Constant::Bool(true))]
+    #[case("\"abc\" == \"abc\"", Constant::Bool(true))]
+    #[case("\"abc\" < \"xyz\"", Constant::Bool(true))]
+    #[case("\"abc\" <= \"xyz\"", Constant::Bool(true))]
+    #[case("\"abc\" >= \"xyz\"", Constant::Bool(false))]
+    #[case("true && false || true || true && false", Constant::Bool(true))]
+    #[case("true && (false || true || true) && false", Constant::Bool(false))]
+    #[case("\"abc \" + 5.5", Constant::String("abc 5.5".to_owned()))]
+    #[case("2 == 2 && 3 == 3", Constant::Bool(true))]
+    #[case("100 * 2 == 200 && 120 > 120 - 1", Constant::Bool(true))]
+    #[case("100 * 2 < 200 || 120 <= 120 - 1", Constant::Bool(false))]
+    #[case("!(100 * 2 < 200) && !(120 <= 120 - 1)", Constant::Bool(true))]
+    fn test_evalutate_expression(#[case] expression: &str, #[case] expected: Constant) {
         let parsed = lr_lang::ExprParser::new()
             .parse(expression)
             .expect("Unable to parse expression");

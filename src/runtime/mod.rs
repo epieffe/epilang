@@ -1,12 +1,11 @@
 pub mod error;
 pub mod executor;
 pub mod frame;
-mod operations;
 
 #[cfg(test)]
 mod test {
     use crate::compiler::test::get_test_program;
-    use crate::compiler::value::Value;
+    use crate::intermediate::constant::Constant;
     use crate::runtime::executor::evalutate_expression;
     use crate::runtime::frame::Frame;
     use rstest::*;
@@ -19,70 +18,70 @@ mod test {
 
         assert_eq!(
             frame.variable_value("my_variable").unwrap(),
-            Value::Int(5)
+            Constant::Int(5)
         );
         assert_eq!(
             frame.variable_value("my_variable_1").unwrap(),
-            Value::Int(5)
+            Constant::Int(5)
         );
-        assert_eq!(frame.variable_value("sum").unwrap(), Value::Int(10));
-        assert_eq!(frame.variable_value("mult").unwrap(), Value::Int(1200));
-        assert_eq!(frame.variable_value("div").unwrap(), Value::Int(60));
+        assert_eq!(frame.variable_value("sum").unwrap(), Constant::Int(10));
+        assert_eq!(frame.variable_value("mult").unwrap(), Constant::Int(1200));
+        assert_eq!(frame.variable_value("div").unwrap(), Constant::Int(60));
         assert_eq!(
             frame.variable_value("expression").unwrap(),
-            Value::Int(125)
+            Constant::Int(125)
         );
         assert_eq!(
             frame.variable_value("float").unwrap(),
-            Value::Float(5.5)
+            Constant::Float(5.5)
         );
         assert_eq!(
             frame.variable_value("float_plus_float").unwrap(),
-            Value::Float(11.0)
+            Constant::Float(11.0)
         );
         assert_eq!(
             frame.variable_value("float_plus_int").unwrap(),
-            Value::Float(10.5)
+            Constant::Float(10.5)
         );
         assert_eq!(
             frame.variable_value("int_plus_float").unwrap(),
-            Value::Float(10.5)
+            Constant::Float(10.5)
         );
         assert_eq!(
             frame.variable_value("float_minus_float").unwrap(),
-            Value::Float(0.5)
+            Constant::Float(0.5)
         );
         assert_eq!(
             frame.variable_value("float_minus_int").unwrap(),
-            Value::Float(0.5)
+            Constant::Float(0.5)
         );
         assert_eq!(
             frame.variable_value("int_minus_float").unwrap(),
-            Value::Float(-0.5)
+            Constant::Float(-0.5)
         );
         assert_eq!(
             frame.variable_value("float_times_float").unwrap(),
-            Value::Float(11.0)
+            Constant::Float(11.0)
         );
         assert_eq!(
             frame.variable_value("float_times_int").unwrap(),
-            Value::Float(11.0)
+            Constant::Float(11.0)
         );
         assert_eq!(
             frame.variable_value("int_times_float").unwrap(),
-            Value::Float(11.0)
+            Constant::Float(11.0)
         );
         assert_eq!(
             frame.variable_value("float_div_float").unwrap(),
-            Value::Float(1.1)
+            Constant::Float(1.1)
         );
         assert_eq!(
             frame.variable_value("float_div_int").unwrap(),
-            Value::Float(1.1)
+            Constant::Float(1.1)
         );
         assert_eq!(
             frame.variable_value("int_div_float").unwrap(),
-            Value::Float(1.1)
+            Constant::Float(1.1)
         );
     }
 
@@ -94,43 +93,43 @@ mod test {
 
         assert_eq!(
             frame.variable_value("string").unwrap(),
-            Value::String("100".to_owned())
+            Constant::String("100".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_concat_1").unwrap(),
-            Value::String("abc100".to_owned())
+            Constant::String("abc100".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_concat_2").unwrap(),
-            Value::String("100100".to_owned())
+            Constant::String("100100".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_concat_3").unwrap(),
-            Value::String("100 abc".to_owned())
+            Constant::String("100 abc".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_concat_4").unwrap(),
-            Value::String("abcefg".to_owned())
+            Constant::String("abcefg".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_plus_int").unwrap(),
-            Value::String("int=5".to_owned())
+            Constant::String("int=5".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_plus_float").unwrap(),
-            Value::String("float=5.5".to_owned())
+            Constant::String("float=5.5".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_plus_int_var").unwrap(),
-            Value::String("int=5".to_owned())
+            Constant::String("int=5".to_owned())
         );
         assert_eq!(
             frame.variable_value("string_plus_float_var").unwrap(),
-            Value::String("float=5.5".to_owned())
+            Constant::String("float=5.5".to_owned())
         );
         assert_eq!(
             frame.variable_value("redefine").unwrap(),
-            Value::String("new_value".to_owned())
+            Constant::String("new_value".to_owned())
         );
     }
     #[test]
@@ -141,11 +140,11 @@ mod test {
 
         assert_eq!(
             frame.variable_value("hello_world").unwrap(),
-            Value::String("Hello World".to_owned())
+            Constant::String("Hello World".to_owned())
         );
         assert_eq!(
             frame.variable_value("value").unwrap(),
-            Value::String(
+            Constant::String(
                 "The square of the circle with the r = 5 is 157. It is > 100. It is <= 200."
                     .to_owned()
             )
@@ -188,8 +187,8 @@ mod test {
         let frame = Frame::default();
         let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
-        assert_eq!(frame.variable_value("var_1").unwrap(), Value::Int(7));
-        assert_eq!(frame.variable_value("result").unwrap(), Value::Int(13));
+        assert_eq!(frame.variable_value("var_1").unwrap(), Constant::Int(7));
+        assert_eq!(frame.variable_value("result").unwrap(), Constant::Int(13));
         assert!(frame.variable_value("var_2").is_err())
     }
 
@@ -199,7 +198,7 @@ mod test {
         let frame = Frame::default();
         let (_, frame) = evalutate_expression(frame, &program).unwrap();
 
-        assert_eq!(frame.variable_value("var_1").unwrap(), Value::Int(7));
+        assert_eq!(frame.variable_value("var_1").unwrap(), Constant::Int(7));
         assert!(frame.variable_value("var_2").is_err());
     }
 }

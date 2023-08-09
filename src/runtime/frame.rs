@@ -1,4 +1,4 @@
-use crate::compiler::value::Value;
+use crate::intermediate::constant::Constant;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -15,7 +15,7 @@ pub enum VariableError {
 #[derive(Debug, Default)]
 pub struct Frame {
     parent: Option<Box<Frame>>,
-    local_variables: HashMap<String, Value>,
+    local_variables: HashMap<String, Constant>,
 }
 
 impl Frame {
@@ -26,7 +26,7 @@ impl Frame {
         }
     }
 
-    pub fn variable_value(&self, variable_name: &str) -> Result<Value, VariableError> {
+    pub fn variable_value(&self, variable_name: &str) -> Result<Constant, VariableError> {
         if let Some(value) = self.local_variables.get(variable_name) {
             Ok(value.clone())
         } else if let Some(parent) = self.parent.as_ref() {
@@ -36,7 +36,7 @@ impl Frame {
         }
     }
 
-    pub fn assign_value(&mut self, variable_name: &str, value: Value) -> Result<(), ExpressionError> {
+    pub fn assign_value(&mut self, variable_name: &str, value: Constant) -> Result<(), ExpressionError> {
         if let Some(variable) = self.local_variables.get_mut(variable_name) {
             *variable = value;
             Ok(())
@@ -50,7 +50,7 @@ impl Frame {
     pub fn define_variable(
         &mut self,
         variable_name: String,
-        value: Value,
+        value: Constant,
     ) -> () {
         if let Some(variable) = self.local_variables.get_mut(&variable_name) {
             *variable = value;
