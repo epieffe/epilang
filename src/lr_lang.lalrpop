@@ -35,7 +35,7 @@ Disjunction: Box<AST> = {
 }
 
 DisjOp: BinaryOpcode = {
-    "||" => BinaryOpcode::Disj,
+    "||" => BinaryOpcode::Or,
 }
 
 Conjunction: Box<AST> = {
@@ -44,7 +44,7 @@ Conjunction: Box<AST> = {
 }
 
 ConjOp: BinaryOpcode = {
-    "&&" => BinaryOpcode::Conj,
+    "&&" => BinaryOpcode::And,
 }
 
 Comparison: Box<AST> = {

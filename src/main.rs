@@ -4,18 +4,27 @@ extern crate lalrpop_util;
 mod compiler;
 mod intermediate;
 mod runtime;
-mod operations;
 
-use crate::runtime::executor::evalutate_expression;
-use crate::runtime::frame::Frame;
 use clap::Parser;
 use std::fs;
+use thiserror::Error;
+use compiler::compiler::CompilerError;
+use runtime::executor::ExpressionError;
+
 
 #[derive(Debug, Parser)]
 #[clap(name = "lr language interpreter", about, verbatim_doc_comment)]
 struct Args {
     #[clap(short, long)]
     program_file: String,
+}
+
+#[derive(Error, Debug)]
+pub enum OperationError {
+    #[error("CompilerError: {0}")]
+    CompilerError(CompilerError),
+    #[error("RuntimeError: {0}")]
+    ExpressionError(ExpressionError),
 }
 
 fn main() {
@@ -25,12 +34,17 @@ fn main() {
     let program_text = fs::read_to_string(args.program_file)
         .expect("Unable to read the program file");
 
-    let program = compiler::lr_lang::ASTParser::new()
+    let ast = compiler::lr_lang::ASTParser::new()
         .parse(&program_text)
         .expect("Unable to parse the program file");
 
-    let frame = Frame::default();
-    let (value, frame) = evalutate_expression(frame, &program).unwrap();
-    println!("Value: {:#?}", value);
-    println!("Main frame: {:#?}", frame);
+    let exp = compiler::compiler::compile(ast.as_ref()).unwrap_or_else(|e| {
+        panic!("CompilerError: {}", e)
+    });
+
+    let v = runtime::executor::evaluate(&exp).unwrap_or_else(|e| {
+        panic!("RuntimeError: {}", e)
+    });
+
+    println!("Value: {}", v.as_ref());
 }

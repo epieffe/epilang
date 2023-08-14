@@ -1,151 +1,151 @@
-use crate::compiler::ast::{AST};
-use crate::intermediate::constant::Constant;
-use crate::intermediate::opcode::BinaryOpcode;
-use crate::intermediate::opcode::UnaryOpcode;
-use crate::runtime::frame::{Frame, VariableError};
-use crate::operations::{
-    conjunction, disjunction, equals, greater, greater_equals, lower, lower_equals, not_equals,
-    OperationError,
-};
+use crate::intermediate::exp::Exp;
+use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
+use crate::runtime::operations::OperationError;
 use thiserror::Error;
+
+use super::value::{V, Value, Pointer};
 
 #[derive(Error, Debug)]
 pub enum ExpressionError {
-    #[error("Unable to evalutate expression {0}: {1}")]
-    VariableError(String, VariableError),
-    #[error("Unable to evalutate expression {0}: {1}")]
-    OperationError(String, OperationError),
+    #[error("OperationError: {0}")]
+    OperationError(OperationError),
     #[error("Variable {0} is not defined")]
     UndefinedVariable(String),
     #[error("Invalid left expression: {0}")]
     InvalidLeftSideAssignment(String),
 }
 
-pub fn evalutate_expression(mut frame: Frame, expr: &AST) -> Result<(Constant, Frame), ExpressionError> {
-    match expr {
-        AST::Constant(n) => Ok((n.clone(), frame)),
-
-        AST::Identifier(variable) => {
-            let value = frame
-                .variable_value(variable)
-                .map_err(|e| ExpressionError::VariableError(expr.to_string(), e))?;
-            Ok((value, frame))
-        },
-
-        AST::Concatenation { left, right } => {
-            let (_, frame) = evalutate_expression(frame, left)?;
-            let (value, frame) = evalutate_expression(frame, right)?;
-            Ok((value, frame))
-        }
-
-        AST::BinaryOp(exp1, opcode, exp2) => {
-            let (value_1, frame) = evalutate_expression(frame, exp1)?;
-            let (value_2, frame) = evalutate_expression(frame, exp2)?;
-            let result = match opcode {
-                BinaryOpcode::Mul => value_1 * value_2,
-                BinaryOpcode::Div => value_1 / value_2,
-                BinaryOpcode::Add => value_1 + value_2,
-                BinaryOpcode::Sub => value_1 - value_2,
-                BinaryOpcode::Conj => conjunction(value_1, value_2),
-                BinaryOpcode::Disj => disjunction(value_1, value_2),
-                BinaryOpcode::Equals => equals(value_1, value_2),
-                BinaryOpcode::NotEquals => not_equals(value_1, value_2),
-                BinaryOpcode::Greater => greater(value_1, value_2),
-                BinaryOpcode::GreaterEquals => greater_equals(value_1, value_2),
-                BinaryOpcode::Lower => lower(value_1, value_2),
-                BinaryOpcode::LowerEquals => lower_equals(value_1, value_2),
-            };
-            let value = result.map_err(|e| ExpressionError::OperationError(expr.to_string(), e))?;
-            Ok((value, frame))
-        }
-
-        AST::UnaryOp(op, exp) => {
-            let (value, frame) = evalutate_expression(frame, exp)?;
-            let value = match op {
-                UnaryOpcode::Not => !value,
-            };
-            Ok((value, frame))
-        }
-
-        AST::Definition(identifier) => {
-            frame.define_variable(identifier.clone(), Constant::Int(0));
-            Ok((Constant::Int(0), frame))
-        }
-
-        AST::Assignment(left , right) => {
-            match left.as_ref() {
-                AST::Identifier(var) => {
-                    let (value, mut frame) = evalutate_expression(frame, right)?;
-                    frame.assign_value(&var, value)?;
-                    Ok((Constant::Int(0), frame))
-                }
-                AST::Definition(var) => {
-                    let (value, mut frame) = evalutate_expression(frame, right)?;
-                    frame.define_variable(var.clone(), value);
-                    Ok((Constant::Int(0), frame))
-                }
-                _ => Err(ExpressionError::InvalidLeftSideAssignment(left.to_string()))
-            }
-        }
-
-        AST::Block(exp) => {
-            let frame = Frame::new(Box::new(frame));
-            let (value, mut frame) = evalutate_expression(frame, exp)?;
-            Ok((value, *frame.take_parent().unwrap()))
-        }
-
-        AST::Condition { exp, then_block, else_block } => {
-            let (condition, frame) = evalutate_expression(frame, exp)?;
-            let frame = Frame::new(Box::new(frame));
-            let branch = if condition.as_bool() { then_block } else { else_block };
-            let (value, mut frame) = evalutate_expression(frame, branch)?;
-            Ok((value, *frame.take_parent().unwrap()))
-        }
-    }
+pub fn evaluate(exp: &Exp) -> Result<V, ExpressionError> {
+    evaluate_with_stack(exp, &mut Vec::new(), 0)
 }
 
-#[cfg(test)]
-mod test {
-    use crate::compiler::lr_lang;
-    use crate::intermediate::constant::Constant;
-    use crate::runtime::executor::evalutate_expression;
-    use crate::Frame;
-    use rstest::*;
+pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Result<V, ExpressionError> {
+    match exp {
+        Exp::Constant { value } => {
+            Ok(V::Val(Value::from(value)))
+        },
 
-    #[rstest]
-    #[case("1 + 2 * 3 - 4", Constant::Int(3))]
-    #[case("!0", Constant::Int(-1))]
-    #[case("!-1", Constant::Int(0))]
-    #[case("(1 + 2) * (3 - 4)", Constant::Int(-3))]
-    #[case("true || false", Constant::Bool(true))]
-    #[case("true && false", Constant::Bool(false))]
-    #[case("!false", Constant::Bool(true))]
-    #[case("!true", Constant::Bool(false))]
-    #[case("2 < 3", Constant::Bool(true))]
-    #[case("2 <= 3", Constant::Bool(true))]
-    #[case("2 <= 3", Constant::Bool(true))]
-    #[case("2 >= 2", Constant::Bool(true))]
-    #[case("2 >= 1", Constant::Bool(true))]
-    #[case("2 == 2", Constant::Bool(true))]
-    #[case("2 != 2", Constant::Bool(false))]
-    #[case("2 != 3", Constant::Bool(true))]
-    #[case("\"abc\" == \"abc\"", Constant::Bool(true))]
-    #[case("\"abc\" < \"xyz\"", Constant::Bool(true))]
-    #[case("\"abc\" <= \"xyz\"", Constant::Bool(true))]
-    #[case("\"abc\" >= \"xyz\"", Constant::Bool(false))]
-    #[case("true && false || true || true && false", Constant::Bool(true))]
-    #[case("true && (false || true || true) && false", Constant::Bool(false))]
-    #[case("\"abc \" + 5.5", Constant::String("abc 5.5".to_owned()))]
-    #[case("2 == 2 && 3 == 3", Constant::Bool(true))]
-    #[case("100 * 2 == 200 && 120 > 120 - 1", Constant::Bool(true))]
-    #[case("100 * 2 < 200 || 120 <= 120 - 1", Constant::Bool(false))]
-    #[case("!(100 * 2 < 200) && !(120 <= 120 - 1)", Constant::Bool(true))]
-    fn test_evalutate_expression(#[case] expression: &str, #[case] expected: Constant) {
-        let parsed = lr_lang::ExprParser::new()
-            .parse(expression)
-            .expect("Unable to parse expression");
-        let mut root_frame = Frame::default();
-        let (value, frame) = evalutate_expression(root_frame, parsed.as_ref()).unwrap();
-        assert_eq!(expected, value)
+        Exp::Variable { scope } => {
+            Ok(V::Ptr(stack[*scope + stack_start]))
+        },
+
+        Exp::Concatenation { first, second } => {
+            evaluate_with_stack(first, stack, stack_start)?;
+            evaluate_with_stack(second, stack, stack_start)
+        },
+
+        Exp::BinaryOp { op, arg1, arg2 } => {
+            let val1 = evaluate_with_stack(arg1, stack, stack_start)?;
+            match op {
+                BinaryOpcode::Mul => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let result = val1.as_ref() * val2.as_ref();
+                    let value = result.map_err(|e| ExpressionError::OperationError(e))?;
+                    Ok(V::Val(value))
+                },
+                BinaryOpcode::Div => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let result = val1.as_ref() / val2.as_ref();
+                    let value = result.map_err(|e| ExpressionError::OperationError(e))?;
+                    Ok(V::Val(value))
+                },
+                BinaryOpcode::Add => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let result = val1.as_ref() + val2.as_ref();
+                    let value = result.map_err(|e| ExpressionError::OperationError(e))?;
+                    Ok(V::Val(value))
+                },
+                BinaryOpcode::Sub => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let result = val1.as_ref() - val2.as_ref();
+                    let value = result.map_err(|e| ExpressionError::OperationError(e))?;
+                    Ok(V::Val(value))
+                },
+                BinaryOpcode::And => {
+                    if val1.as_bool() {
+                        Ok(evaluate_with_stack(arg2, stack, stack_start)?)
+                    } else {
+                        Ok(val1)
+                    }
+                },
+                BinaryOpcode::Or => {
+                    if val1.as_bool() {
+                        Ok(val1)
+                    } else {
+                        Ok(evaluate_with_stack(arg2, stack, stack_start)?)
+                    }
+                },
+                BinaryOpcode::Equals => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() == val2.as_ref())))
+                },
+                BinaryOpcode::NotEquals => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() != val2.as_ref())))
+                },
+                BinaryOpcode::Greater => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() > val2.as_ref())))
+                },
+                BinaryOpcode::GreaterEquals => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() >= val2.as_ref())))
+                },
+                BinaryOpcode::Lower => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() < val2.as_ref())))
+                },
+                BinaryOpcode::LowerEquals => {
+                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    Ok(V::Val(Value::Bool(val1.as_ref() <= val2.as_ref())))
+                },
+            }
+        },
+
+        Exp::UnaryOp { op, arg } => {
+            let val = evaluate_with_stack(arg, stack, stack_start)?;
+            match op {
+                UnaryOpcode::Not => {
+                    Ok(V::Val(!val.as_ref()))
+                },
+            }
+        },
+
+        Exp::Let { scope: _ } => {
+            stack.push(Pointer::unit());
+            Ok(V::Val(Value::Unit))
+        },
+
+        Exp::Assignment { left, right } => {
+            let right_v: V = evaluate_with_stack(right, stack, stack_start)?;
+            match left.as_ref() {
+                Exp::Variable { scope } => match right_v {
+                    V::Ptr(ptr) => stack[scope + stack_start] = ptr,
+                    V::Val(value) => stack[scope + stack_start] = Pointer::from(Box::new(value)),
+                },
+
+                _ => panic!("Invalid left-expression in assignment"),
+            }
+            Ok(V::Val(Value::Unit))
+        },
+
+        Exp::Block { exp } => {
+            let scope = stack.len();
+            let result = evaluate_with_stack(exp, stack, stack_start);
+            stack.truncate(scope);
+            result
+        },
+
+        Exp::Condition { exp, then_block, else_block } => {
+            let condition = evaluate_with_stack(exp, stack, stack_start)?;
+            let scope = stack.len();
+            let result = if condition.as_bool() {
+                evaluate_with_stack(then_block, stack, stack_start)
+            } else {
+                evaluate_with_stack(else_block, stack, stack_start)
+            };
+            stack.truncate(scope);
+            result
+        },
     }
 }
