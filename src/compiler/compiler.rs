@@ -97,7 +97,7 @@ pub fn compile_with_context(ast: &AST, context: &mut Context) -> Result<Exp, Com
                 let var = context.variable_scope.pop().unwrap();
                 context.variable_map.remove(&var);
             }
-            Ok(exp)
+            Ok(Exp::Block { exp: Box::new(exp) })
         },
 
         AST::Condition { exp, then_block, else_block } => {

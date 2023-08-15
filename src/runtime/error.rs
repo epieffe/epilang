@@ -1,4 +1,3 @@
-use crate::intermediate::constant::Type;
 use crate::runtime::executor::ExpressionError;
 use crate::runtime::frame::VariableError;
 use thiserror::Error;
