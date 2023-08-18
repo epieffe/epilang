@@ -12,12 +12,11 @@ use thiserror::Error;
 use rustyline::Editor;
 
 use compiler::lr_lang::ASTParser;
-use compiler::compiler::Context;
-use compiler::compiler::CompilerError;
-use compiler::compiler::compile_with_context;
-use runtime::executor::ExpressionError;
+use compiler::frame::Frame;
+use compiler::compiler::compile;
+use compiler::error::CompilerError;
+use runtime::executor::{ExpressionError, evaluate_with_stack};
 use runtime::value::{Pointer, Value, V};
-use runtime::executor::evaluate_with_stack;
 
 #[derive(Error, Debug)]
 pub enum ProgramError {
@@ -43,17 +42,17 @@ pub fn run_file(file_path: String) {
     let text = fs::read_to_string(file_path)
         .expect("Unable to read the program file");
 
-    let mut context: Context = Context::new();
+    let mut frame: Frame = Default::default();
     let mut stack: Vec<Pointer> = Vec::new();
 
-    match run_program(text, &mut context, &mut stack) {
+    match run_program(text, &mut frame, &mut stack) {
         Ok(v) => println!("Result: {}", v.as_ref()),
         Err(e) => println!("{}", e),
     }
 }
 
 pub fn repl() {
-    let mut context: Context = Context::new();
+    let mut frame: Frame = Default::default();
     let mut stack: Vec<Pointer> = Vec::new();
 
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
@@ -62,7 +61,7 @@ pub fn repl() {
             Ok(line) => {
                 if line.trim().is_empty() { continue };
                 rl.add_history_entry(line.as_str());
-                match run_program(line, &mut context, &mut stack) {
+                match run_program(line, &mut frame, &mut stack) {
                     Ok(v) => {
                         match v.as_ref() {
                             Value::Unit => (),
@@ -77,11 +76,11 @@ pub fn repl() {
     }
 }
 
-fn run_program(line: String, context: &mut Context, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
+fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
     let ast = ASTParser::new().parse(&line)
         .map_err(|_| {ProgramError::SyntaxError})?;
 
-    let exp = compile_with_context(ast.as_ref(), context)
+    let exp = compile(ast.as_ref(), frame)
         .map_err(|e| {ProgramError::CompilerError(e)})?;
 
     let v = evaluate_with_stack(&exp, stack, 0)

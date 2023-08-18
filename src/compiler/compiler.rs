@@ -1,37 +1,10 @@
-use std::collections::HashMap;
-use thiserror::Error;
-
 use crate::intermediate::exp::Exp;
 
 use super::ast::AST;
+use super::error::CompilerError;
+use super::frame::Frame;
 
-#[derive(Error, Debug)]
-pub enum CompilerError {
-    #[error("Variable {0} is not defined")]
-    UndefinedVariable(String),
-    #[error("Invalid left expression: {0}")]
-    InvalidLeftSideAssignment(String),
-}
-
-pub struct Context {
-    pub variable_scope: Vec<String>,
-    pub variable_map: HashMap<String, usize>,
-}
-
-impl Context {
-    pub fn new() -> Self {
-        Self {
-            variable_scope: Vec::new(),
-            variable_map: HashMap::new(),
-        }
-    }
-}
-
-pub fn compile(ast: &AST) -> Result<Exp, CompilerError> {
-    compile_with_context(ast, &mut Context::new())
-}
-
-pub fn compile_with_context(ast: &AST, context: &mut Context) -> Result<Exp, CompilerError> {
+pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
 
     match ast {
         AST::Constant(value) => {
@@ -39,37 +12,35 @@ pub fn compile_with_context(ast: &AST, context: &mut Context) -> Result<Exp, Com
         },
 
         AST::Identifier(name) => {
-            let scope = context.variable_map.get(name).ok_or(CompilerError::UndefinedVariable(name.clone()))?;
-            Ok(Exp::Variable { scope: *scope })
+            let scope = frame.variable_scope(name)?;
+            Ok(Exp::Variable { scope })
         },
 
         AST::Concatenation { left, right } => {
-            let exp1 = compile_with_context(left, context)?;
-            let exp2 = compile_with_context(right, context)?;
+            let exp1 = compile(left, frame)?;
+            let exp2 = compile(right, frame)?;
             Ok(Exp::Concatenation { first: Box::new(exp1), second: Box::new(exp2) })
         },
 
         AST::BinaryOp(arg1, op, arg2) => {
-            let exp1 = compile_with_context(arg1, context)?;
-            let exp2 = compile_with_context(arg2, context)?;
+            let exp1 = compile(arg1, frame)?;
+            let exp2 = compile(arg2, frame)?;
             Ok(Exp::BinaryOp { op: *op, arg1: Box::new(exp1), arg2: Box::new(exp2) })
         },
 
         AST::UnaryOp(op, arg) => {
-            let exp = compile_with_context(arg, context)?;
+            let exp = compile(arg, frame)?;
             Ok(Exp::UnaryOp { op: *op, arg: Box::new(exp) })
         },
 
         AST::Definition(name) => {
-            let scope = context.variable_scope.len();
-            context.variable_scope.push(name.clone());
-            context.variable_map.insert(name.clone(), scope);
+            let scope = frame.define_variable(name.clone());
             Ok(Exp::Let { scope })
         },
 
         AST::Assignment(left, right) => {
-            let left_exp = compile_with_context(left, context)?;
-            let right_exp = compile_with_context(right, context)?;
+            let left_exp = compile(left, frame)?;
+            let right_exp = compile(right, frame)?;
             match left_exp {
                 Exp::Let { scope } => {
                     Ok(Exp::Concatenation {
@@ -91,30 +62,19 @@ pub fn compile_with_context(ast: &AST, context: &mut Context) -> Result<Exp, Com
         },
 
         AST::Block(exp) => {
-            let scope = context.variable_scope.len();
-            let exp = compile_with_context(exp, context)?;
-            while context.variable_scope.len() > scope {
-                let var = context.variable_scope.pop().unwrap();
-                context.variable_map.remove(&var);
-            }
+            let mut sub_frame = Frame::new(frame);
+            let exp = compile(exp, &mut sub_frame)?;
             Ok(Exp::Block { exp: Box::new(exp) })
         },
 
         AST::Condition { exp, then_block, else_block } => {
-            let exp = compile_with_context(exp, context)?;
-            let scope = context.variable_scope.len();
+            let exp = compile(exp, frame)?;
             // then block
-            let then_block = compile_with_context(then_block, context)?;
-            while context.variable_scope.len() > scope {
-                let var = context.variable_scope.pop().unwrap();
-                context.variable_map.remove(&var);
-            }
+            let mut then_frame = Frame::new(frame);
+            let then_block = compile(then_block, &mut then_frame)?;
             // else block
-            let else_block = compile_with_context(else_block, context)?;
-            while context.variable_scope.len() > scope {
-                let var = context.variable_scope.pop().unwrap();
-                context.variable_map.remove(&var);
-            }
+            let mut else_frame = Frame::new(frame);
+            let else_block = compile(else_block, &mut else_frame)?;
             Ok(Exp::Condition {
                 exp: Box::new(exp),
                 then_block: Box::new(then_block),

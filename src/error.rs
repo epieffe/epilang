@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::compiler::compiler::CompilerError;
+use crate::compiler::error::CompilerError;
 use crate::runtime::executor::ExpressionError;
 
 #[derive(Error, Debug)]
