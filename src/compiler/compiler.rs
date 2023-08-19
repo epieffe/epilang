@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::intermediate::exp::Exp;
 
 use super::ast::AST;
@@ -81,5 +83,28 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
                 else_block: Box::new(else_block)
             })
         },
+
+        AST::Closure { args, exp } => {
+            let mut function_frame: Frame = Default::default();
+            for arg in args {
+                function_frame.define_variable(arg.clone());
+            }
+            let exp = compile(exp, &mut function_frame)?;
+            Ok(Exp::Closure { num_args: args.len(), exp: Box::new(exp) })
+        },
+
+        AST::FunctionCall { fun, args } => {
+            let fun_exp = compile(fun, frame)?;
+            let mut args_exps = Vec::new();
+            for arg in args {
+                let arg_exp = compile(arg, frame)?;
+                args_exps.push(arg_exp);
+            };
+            Ok(Exp::FunctionCall { fun: Box::new(fun_exp), args: args_exps })
+        },
+
+        AST::Closure { args, exp } => todo!(),
+
+        AST::FunctionCall { fun, args } => todo!(),
     }
 }

@@ -14,6 +14,8 @@ pub enum AST {
     Assignment(Box<AST>, Box<AST>),
     Block(Box<AST>),
     Condition { exp: Box<AST>, then_block: Box<AST>, else_block: Box<AST> },
+    Closure { args: Vec<String>, exp: Box<AST> },
+    FunctionCall { fun: Box<AST>, args: Vec<AST> },
 }
 
 impl Display for AST {
@@ -30,6 +32,8 @@ impl Display for AST {
             AST::Condition{ exp, then_block, else_block } => {
                 write!(f, "(if {} {{{}}} else {{{}}})", exp, then_block, else_block)
             },
+            AST::Closure { args, exp } => todo!(),
+            AST::FunctionCall { fun, args } => todo!(),
         }
     }
 }

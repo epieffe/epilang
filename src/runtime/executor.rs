@@ -147,5 +147,9 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
             stack.truncate(scope);
             result
         },
+
+        Exp::Closure { num_args, exp } => todo!(),
+
+        Exp::FunctionCall { fun, args } => todo!(),
     }
 }

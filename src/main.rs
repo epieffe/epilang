@@ -78,9 +78,10 @@ pub fn repl() {
 
 fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
     let ast = ASTParser::new().parse(&line)
-        .map_err(|_| {ProgramError::SyntaxError})?;
+        .unwrap();
+        //.map_err(|_| {ProgramError::SyntaxError})?;
 
-    let exp = compile(ast.as_ref(), frame)
+    let exp = compile(&ast, frame)
         .map_err(|e| {ProgramError::CompilerError(e)})?;
 
     let v = evaluate_with_stack(&exp, stack, 0)

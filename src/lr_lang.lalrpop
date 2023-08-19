@@ -6,31 +6,32 @@ use std::str::FromStr;
 
 grammar;
 
-pub AST: Box<AST> = {
-    <left:AST> ";" <right:Assignment> => Box::new(AST::Concatenation{ left: left, right: right }),
+pub AST: AST = {
+    <left:AST> ";" <right:Assignment> => AST::Concatenation{ left: Box::new(left), right: Box::new(right) },
     Assignment,
 }
 
-Term: Box<AST> = {
-    "let" <Identifier> => Box::new(AST::Definition(<>)),
-    "if" <exp:AST> "{" <thn:AST> "}" => Box::new(AST::Condition{ exp: exp, then_block: thn, else_block: Box::new(AST::Constant(Constant::Int(0))) }),
-    "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => Box::new(AST::Condition{ exp: exp, then_block: thn, else_block: els }),
-    "{" <AST> "}" => Box::new(AST::Block(<>)),
-    "(" <AST> ")" => Box::new(AST::Block(<>)),
-    IntNum => Box::new(AST::Constant(Constant::Int(<>))),
-    FloatNum => Box::new(AST::Constant(Constant::Float(<>))),
-    StringLiteral => Box::new(AST::Constant(Constant::String(<>))),
-    BoolLiteral => Box::new(AST::Constant(Constant::Bool(<>))),
-    Identifier => Box::new(AST::Identifier(<>)),
+Term: AST = {
+    "let" <Identifier> => AST::Definition(<>),
+    "if" <exp:AST> "{" <thn:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(AST::Constant(Constant::Int(0))) },
+    "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(els) },
+    "{" <AST> "}" => AST::Block(Box::new(<>)),
+    "(" <AST> ")" => AST::Block(Box::new(<>)),
+    "|" <args:Comma<Identifier>> "|" "{" <exp:AST> "}" => AST::Closure { args: args, exp: Box::new(exp) },
+    IntNum => AST::Constant(Constant::Int(<>)),
+    FloatNum => AST::Constant(Constant::Float(<>)),
+    StringLiteral => AST::Constant(Constant::String(<>)),
+    BoolLiteral => AST::Constant(Constant::Bool(<>)),
+    Identifier => AST::Identifier(<>),
 }
 
-Assignment: Box<AST> = {
-    <Assignment> "=" <Disjunction> => Box::new(AST::Assignment(<>)),
+Assignment: AST = {
+    <left:Assignment> "=" <right:Disjunction> => AST::Assignment(Box::new(left), Box::new(right)),
     Disjunction
 }
 
-Disjunction: Box<AST> = {
-    Disjunction DisjOp Conjunction => Box::new(AST::BinaryOp(<>)),
+Disjunction: AST = {
+    <exp1:Disjunction> <op:DisjOp> <exp2:Conjunction> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
     Conjunction,
 }
 
@@ -38,8 +39,8 @@ DisjOp: BinaryOpcode = {
     "||" => BinaryOpcode::Or,
 }
 
-Conjunction: Box<AST> = {
-    Conjunction ConjOp Comparison => Box::new(AST::BinaryOp(<>)),
+Conjunction: AST = {
+    <exp1:Conjunction> <op:ConjOp> <exp2:Comparison> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
     Comparison,
 }
 
@@ -47,8 +48,8 @@ ConjOp: BinaryOpcode = {
     "&&" => BinaryOpcode::And,
 }
 
-Comparison: Box<AST> = {
-    Comparison CompareOp Summ => Box::new(AST::BinaryOp(<>)),
+Comparison: AST = {
+    <exp1:Comparison> <op:CompareOp> <exp2:Summ> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
     Summ,
 }
 
@@ -61,8 +62,8 @@ CompareOp: BinaryOpcode = {
     ">=" => BinaryOpcode::GreaterEquals,
 }
 
-Summ: Box<AST> = {
-    Summ SummOp Factor => Box::new(AST::BinaryOp(<>)),
+Summ: AST = {
+    <exp1:Summ> <op:SummOp> <exp2:Factor> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
     Factor,
 }
 
@@ -71,8 +72,8 @@ SummOp: BinaryOpcode = {
     "-" => BinaryOpcode::Sub,
 }
 
-Factor: Box<AST> = {
-    Factor FactorOp UnaryResult => Box::new(AST::BinaryOp(<>)),
+Factor: AST = {
+    <exp1:Factor> <op:FactorOp> <exp2:UnaryResult> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
     UnaryResult,
 }
 
@@ -81,13 +82,18 @@ FactorOp: BinaryOpcode = {
     "/" => BinaryOpcode::Div,
 }
 
-UnaryResult: Box<AST> = {
-    UnaryOp Term => Box::new(AST::UnaryOp(<>)),
-    Term,
+UnaryResult: AST = {
+    <op:UnaryOp> <exp:FunctionCall> => AST::UnaryOp(op, Box::new(exp)),
+    FunctionCall,
 }
 
 UnaryOp: UnaryOpcode = {
     "!" => UnaryOpcode::Not,
+}
+
+FunctionCall: AST = {
+    <fun:FunctionCall> "(" <args:Comma<AST>> ")" => AST::FunctionCall { fun: Box::new(fun), args: args},
+    Term,
 }
 
 Identifier: String = {
@@ -110,3 +116,11 @@ BoolLiteral: bool = {
     "true" => true,
     "false" => false,
 }
+
+Comma<T>: Vec<T> = {
+    <e:T> => vec![e],
+    <mut list:Comma<T>> "," <e:T> => {
+        list.push(e);
+        list
+    }
+};
