@@ -9,9 +9,7 @@ edition = "2018"
 lalrpop = { version = "0.20", features = ["lexer"] }
 
 [dependencies]
-clap = { version = "3.2", features = [ "derive" ]}
 lalrpop-util = "0.20"
-regex = "1"
 thiserror = "1.0"
 rustyline = "10.0.0"
 
