@@ -4,7 +4,6 @@ extern crate lalrpop_util;
 mod compiler;
 mod intermediate;
 mod runtime;
-mod error;
 
 use std::env;
 use std::fs;
@@ -20,8 +19,8 @@ use runtime::value::{Pointer, Value, V};
 
 #[derive(Error, Debug)]
 pub enum ProgramError {
-    #[error("SyntaxError")]
-    SyntaxError,
+    #[error("SyntaxError: {0}")]
+    SyntaxError(String),
     #[error("CompilerError: {0}")]
     CompilerError(CompilerError),
     #[error("RuntimeError: {0}")]
@@ -78,14 +77,13 @@ pub fn repl() {
 
 fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
     let ast = ASTParser::new().parse(&line)
-        .unwrap();
-        //.map_err(|_| {ProgramError::SyntaxError})?;
+        .map_err(|e| { ProgramError::SyntaxError(e.to_string()) })?;
 
     let exp = compile(&ast, frame)
-        .map_err(|e| {ProgramError::CompilerError(e)})?;
+        .map_err(|e| { ProgramError::CompilerError(e) })?;
 
     let v = evaluate_with_stack(&exp, stack, 0)
-        .map_err(|e| {ProgramError::RuntimeError(e)})?;
+        .map_err(|e| { ProgramError::RuntimeError(e) })?;
 
     Ok(v)
 }

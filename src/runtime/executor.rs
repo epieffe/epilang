@@ -3,7 +3,7 @@ use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 use thiserror::Error;
 
-use super::value::{V, Value, Pointer};
+use super::value::{V, Value, Pointer, Function};
 
 #[derive(Error, Debug)]
 pub enum ExpressionError {
@@ -148,8 +148,36 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
             result
         },
 
-        Exp::Closure { num_args, exp } => todo!(),
+        Exp::Closure { num_args, exp } => {
+            let function = Function {
+                num_args: *num_args,
+                external_values: Vec::new(),
+                body: exp.clone(),
+            };
+            Ok(V::Val(Value::Function(function)))
+        },
 
-        Exp::FunctionCall { fun, args } => todo!(),
+        Exp::FunctionCall { fun, args } => {
+            let fun = evaluate_with_stack(fun, stack, stack_start)?;
+            match fun.as_ref() {
+                Value::Function(f) => {
+                    if args.len() != f.num_args {
+                        todo!()
+                    }
+                    let function_stack_start = stack.len();
+                    for arg in args {
+                        match evaluate_with_stack(arg, stack, stack_start)? {
+                            V::Ptr(ptr) => stack.push(ptr),
+                            V::Val(value) => stack.push(Pointer::from(Box::new(value)))
+                        };
+                    };
+                    let result = evaluate_with_stack(f.body.as_ref(), stack, function_stack_start)?;
+                    stack.truncate(function_stack_start);
+                    Ok(result)
+                },
+
+                _ => todo!()
+            }
+        },
     }
 }

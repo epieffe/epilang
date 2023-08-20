@@ -101,10 +101,6 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
                 args_exps.push(arg_exp);
             };
             Ok(Exp::FunctionCall { fun: Box::new(fun_exp), args: args_exps })
-        },
-
-        AST::Closure { args, exp } => todo!(),
-
-        AST::FunctionCall { fun, args } => todo!(),
+        }
     }
 }

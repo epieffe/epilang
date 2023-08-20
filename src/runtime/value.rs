@@ -2,14 +2,17 @@ use std::fmt;
 use std::ptr;
 
 use crate::intermediate::constant::Constant;
+use crate::intermediate::constant::Type;
+use crate::intermediate::exp::Exp;
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(Debug)]
 pub enum Value {
     Unit,
     Int(i32),
     Float(f32),
     Bool(bool),
     String(String),
+    Function(Function),
 }
 
 impl Value {
@@ -20,6 +23,18 @@ impl Value {
             Value::Int(i) => *i != 0,
             Value::Float(f) => *f != 0.0,
             Value::String(s) => s != "",
+            Value::Function(_) => false,
+        }
+    }
+
+    pub fn get_type(&self) -> Type {
+        match self {
+            Value::Unit => Type::Unit,
+            Value::Bool(_) => Type::Bool,
+            Value::Int(_) => Type::Int,
+            Value::Float(_) => Type::Float,
+            Value::String(_) => Type::String,
+            Value::Function(_) => Type::Function,
         }
     }
 }
@@ -43,9 +58,18 @@ impl fmt::Display for Value {
             Value::Float(float) => write!(f, "{}", float),
             Value::Bool(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
+            Value::Function(_) => write!(f, "Value::Function")
         }
     }
 }
+
+#[derive(Debug)]
+pub struct Function {
+    pub num_args: usize,
+    pub external_values: Vec<Value>,
+    pub body: Box<Exp>
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Pointer {
     pub value: *mut Value,

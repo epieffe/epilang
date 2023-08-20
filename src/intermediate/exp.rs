@@ -2,7 +2,7 @@ use super::constant::Constant;
 use super::opcode::BinaryOpcode;
 use super::opcode::UnaryOpcode;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Exp {
     Constant { value: Constant },
     Variable{ scope: usize },

@@ -7,6 +7,7 @@ pub enum Type {
     Float,
     String,
     Bool,
+    Function,
 }
 
 impl Display for Type {
@@ -17,6 +18,7 @@ impl Display for Type {
             Type::Float => write!(f, "Float"),
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "Bool"),
+            Type::Function => write!(f, "Function"),
         }
     }
 }

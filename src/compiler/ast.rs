@@ -32,8 +32,20 @@ impl Display for AST {
             AST::Condition{ exp, then_block, else_block } => {
                 write!(f, "(if {} {{{}}} else {{{}}})", exp, then_block, else_block)
             },
-            AST::Closure { args, exp } => todo!(),
-            AST::FunctionCall { fun, args } => todo!(),
+            AST::Closure { args, exp } => {
+                write!(f, "fn (")?;
+                for arg in args {
+                    write!(f, "{}, ", arg)?;
+                }
+                write!(f, ") {{{}}}", exp)
+            },
+            AST::FunctionCall { fun, args } => {
+                write!(f, "{}(", fun)?;
+                for arg in args {
+                    write!(f, "{}, ", arg)?;
+                }
+                write!(f, ")")
+            },
         }
     }
 }
