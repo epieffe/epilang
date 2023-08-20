@@ -1,7 +1,8 @@
+use thiserror::Error;
+
 use crate::intermediate::exp::Exp;
 use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
-use thiserror::Error;
 
 use super::value::{V, Value, Pointer, Function};
 
@@ -11,15 +12,13 @@ pub enum ExpressionError {
     OperationError(OperationError),
     #[error("Variable {0} is not defined")]
     UndefinedVariable(String),
-    #[error("Invalid left expression: {0}")]
-    InvalidLeftSideAssignment(String),
+    #[error("TypeError: {0} is not callable")]
+    ValueNotCallable(Value),
+    #[error("TypeError: function requires {0} positional argument(s) but {1} was given")]
+    WrongArgumentsNumber(usize, usize),
 }
 
-pub fn evaluate(exp: &Exp) -> Result<V, ExpressionError> {
-    evaluate_with_stack(exp, &mut Vec::new(), 0)
-}
-
-pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Result<V, ExpressionError> {
+pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Result<V, ExpressionError> {
     match exp {
         Exp::Constant { value } => {
             Ok(V::Val(Value::from(value)))
@@ -30,40 +29,40 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
         },
 
         Exp::Concatenation { first, second } => {
-            evaluate_with_stack(first, stack, stack_start)?;
-            evaluate_with_stack(second, stack, stack_start)
+            evaluate(first, stack, stack_start)?;
+            evaluate(second, stack, stack_start)
         },
 
         Exp::BinaryOp { op, arg1, arg2 } => {
-            let val1 = evaluate_with_stack(arg1, stack, stack_start)?;
+            let val1 = evaluate(arg1, stack, stack_start)?;
             match op {
                 BinaryOpcode::Mul => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     let result = val1.as_ref() * val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Div => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     let result = val1.as_ref() / val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Add => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     let result = val1.as_ref() + val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Sub => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     let result = val1.as_ref() - val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::And => {
                     if val1.as_bool() {
-                        Ok(evaluate_with_stack(arg2, stack, stack_start)?)
+                        Ok(evaluate(arg2, stack, stack_start)?)
                     } else {
                         Ok(val1)
                     }
@@ -72,38 +71,38 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
                     if val1.as_bool() {
                         Ok(val1)
                     } else {
-                        Ok(evaluate_with_stack(arg2, stack, stack_start)?)
+                        Ok(evaluate(arg2, stack, stack_start)?)
                     }
                 },
                 BinaryOpcode::Equals => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() == val2.as_ref())))
                 },
                 BinaryOpcode::NotEquals => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() != val2.as_ref())))
                 },
                 BinaryOpcode::Greater => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() > val2.as_ref())))
                 },
                 BinaryOpcode::GreaterEquals => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() >= val2.as_ref())))
                 },
                 BinaryOpcode::Lower => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() < val2.as_ref())))
                 },
                 BinaryOpcode::LowerEquals => {
-                    let val2 = evaluate_with_stack(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, stack, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() <= val2.as_ref())))
                 },
             }
         },
 
         Exp::UnaryOp { op, arg } => {
-            let val = evaluate_with_stack(arg, stack, stack_start)?;
+            let val = evaluate(arg, stack, stack_start)?;
             match op {
                 UnaryOpcode::Not => {
                     Ok(V::Val(!val.as_ref()))
@@ -117,13 +116,13 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
         },
 
         Exp::Assignment { left, right } => {
-            let right_v: V = evaluate_with_stack(right, stack, stack_start)?;
+            let right_v: V = evaluate(right, stack, stack_start)?;
             match left.as_ref() {
                 Exp::Variable { scope } => match right_v {
                     V::Ptr(ptr) => stack[scope + stack_start] = ptr,
                     V::Val(value) => stack[scope + stack_start] = Pointer::from(Box::new(value)),
                 },
-
+                // This should never happen if program was compiled correctly
                 _ => panic!("Invalid left-expression in assignment"),
             }
             Ok(V::Val(Value::Unit))
@@ -131,18 +130,18 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
 
         Exp::Block { exp } => {
             let scope = stack.len();
-            let result = evaluate_with_stack(exp, stack, stack_start);
+            let result = evaluate(exp, stack, stack_start);
             stack.truncate(scope);
             result
         },
 
         Exp::Condition { exp, then_block, else_block } => {
-            let condition = evaluate_with_stack(exp, stack, stack_start)?;
+            let condition = evaluate(exp, stack, stack_start)?;
             let scope = stack.len();
             let result = if condition.as_bool() {
-                evaluate_with_stack(then_block, stack, stack_start)
+                evaluate(then_block, stack, stack_start)
             } else {
-                evaluate_with_stack(else_block, stack, stack_start)
+                evaluate(else_block, stack, stack_start)
             };
             stack.truncate(scope);
             result
@@ -158,25 +157,25 @@ pub fn evaluate_with_stack(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usi
         },
 
         Exp::FunctionCall { fun, args } => {
-            let fun = evaluate_with_stack(fun, stack, stack_start)?;
+            let fun = evaluate(fun, stack, stack_start)?;
             match fun.as_ref() {
                 Value::Function(f) => {
-                    if args.len() != f.num_args {
-                        todo!()
-                    }
-                    let function_stack_start = stack.len();
-                    for arg in args {
-                        match evaluate_with_stack(arg, stack, stack_start)? {
-                            V::Ptr(ptr) => stack.push(ptr),
-                            V::Val(value) => stack.push(Pointer::from(Box::new(value)))
+                    if args.len() == f.num_args {
+                        let function_stack_start = stack.len();
+                        for arg in args {
+                            match evaluate(arg, stack, stack_start)? {
+                                V::Ptr(ptr) => stack.push(ptr),
+                                V::Val(value) => stack.push(Pointer::from(Box::new(value)))
+                            };
                         };
-                    };
-                    let result = evaluate_with_stack(f.body.as_ref(), stack, function_stack_start)?;
-                    stack.truncate(function_stack_start);
-                    Ok(result)
+                        let result = evaluate(f.body.as_ref(), stack, function_stack_start)?;
+                        stack.truncate(function_stack_start);
+                        Ok(result)
+                    } else {
+                        Err(ExpressionError::WrongArgumentsNumber(f.num_args, args.len()))
+                    }
                 },
-
-                _ => todo!()
+                _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().clone()))
             }
         },
     }

@@ -5,7 +5,7 @@ use crate::intermediate::constant::Constant;
 use crate::intermediate::constant::Type;
 use crate::intermediate::exp::Exp;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Unit,
     Int(i32),
@@ -42,6 +42,7 @@ impl Value {
 impl From<&Constant> for Value {
     fn from(value: &Constant) -> Self {
         match value {
+            Constant::Unit => Value::Unit,
             Constant::Int(i) => Value::Int(*i),
             Constant::Float(f) => Value::Float(*f),
             Constant::String(s) => Value::String(s.clone()),
@@ -63,7 +64,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Function {
     pub num_args: usize,
     pub external_values: Vec<Value>,
@@ -86,10 +87,6 @@ impl Pointer {
 
     pub fn as_ref(&self) -> &Value {
         unsafe{ &*self.value }
-    }
-
-    pub fn as_mut_ref(&mut self) -> &mut Value {
-        unsafe{ &mut *self.value }
     }
 }
 
@@ -122,13 +119,6 @@ impl V {
     pub fn as_ref(&self) -> &Value {
         match self {
             V::Ptr(ptr) => ptr.as_ref(),
-            V::Val(value) => value
-        }
-    }
-
-    pub fn as_mut_ref(&mut self) -> &mut Value {
-        match self {
-            V::Ptr(ptr) => ptr.as_mut_ref(),
             V::Val(value) => value
         }
     }

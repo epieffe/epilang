@@ -11,10 +11,7 @@ impl Add for &Value {
 
     fn add(self, other: Self) -> Self::Output {
         match self {
-            Value::Unit => todo!(),
-
             Value::Int(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Int(v1 + v2)),
                 Value::Float(v2) => Ok(Value::Float(*v1 as f32 + v2)),
                 Value::String(v2) => Ok(Value::String(v1.to_string() + v2.as_str())),
@@ -22,7 +19,6 @@ impl Add for &Value {
             },
 
             Value::Float(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Float(v1 + *v2 as f32)),
                 Value::Float(v2) => Ok(Value::Float(v1 + v2)),
                 Value::String(v2) => Ok(Value::String(v1.to_string() + v2.as_str())),
@@ -45,17 +41,13 @@ impl Sub for &Value {
 
     fn sub(self, other: Self) -> Self::Output {
         match self {
-            Value::Unit => todo!(),
-
             Value::Int(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Int(v1 - v2)),
                 Value::Float(v2) => Ok(Value::Float(*v1 as f32 - v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Div, Int, v.get_type())),
             },
 
             Value::Float(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Float(v1 - *v2 as f32)),
                 Value::Float(v2) => Ok(Value::Float(v1 - v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Div, Int, v.get_type())),
@@ -71,20 +63,18 @@ impl Mul for &Value {
 
     fn mul(self, other: Self) -> Self::Output {
         match self {
-            Value::Unit => todo!(),
-
             Value::Int(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Int(v1 * v2)),
                 Value::Float(v2) => Ok(Value::Float(*v1 as f32 * v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Mul, Int, v.get_type())),
             },
+
             Value::Float(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Float(v1 * *v2 as f32)),
                 Value::Float(v2) => Ok(Value::Float(v1 * v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Mul, Float, v.get_type())),
             },
+
             v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Mul, v.get_type(), other.get_type())),
         }
     }
@@ -95,17 +85,13 @@ impl Div for &Value {
 
     fn div(self, other: Self) -> Self::Output {
         match self {
-            Value::Unit => todo!(),
-
             Value::Int(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Int(v1 / v2)),
                 Value::Float(v2) => Ok(Value::Float(*v1 as f32 / v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Div, Int, v.get_type())),
             },
 
             Value::Float(v1) => match other {
-                Value::Unit => todo!(),
                 Value::Int(v2) => Ok(Value::Float(v1 / *v2 as f32)),
                 Value::Float(v2) => Ok(Value::Float(v1 / v2)),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Div, Float, v.get_type())),

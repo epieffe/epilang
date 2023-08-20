@@ -14,7 +14,7 @@ use compiler::lr_lang::ASTParser;
 use compiler::frame::Frame;
 use compiler::compiler::compile;
 use compiler::error::CompilerError;
-use runtime::executor::{ExpressionError, evaluate_with_stack};
+use runtime::executor::{ExpressionError, evaluate};
 use runtime::value::{Pointer, Value, V};
 
 #[derive(Error, Debug)]
@@ -82,7 +82,7 @@ fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Res
     let exp = compile(&ast, frame)
         .map_err(|e| { ProgramError::CompilerError(e) })?;
 
-    let v = evaluate_with_stack(&exp, stack, 0)
+    let v = evaluate(&exp, stack, 0)
         .map_err(|e| { ProgramError::RuntimeError(e) })?;
 
     Ok(v)
