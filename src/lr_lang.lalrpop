@@ -13,7 +13,7 @@ pub AST: AST = {
 
 Term: AST = {
     "let" <Identifier> => AST::Definition(<>),
-    "if" <exp:AST> "{" <thn:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(AST::Constant(Constant::Int(0))) },
+    "if" <exp:AST> "{" <thn:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(AST::Constant(Constant::Unit)) },
     "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(els) },
     "{" <AST> "}" => AST::Block(Box::new(<>)),
     "(" <AST> ")" => AST::Block(Box::new(<>)),
