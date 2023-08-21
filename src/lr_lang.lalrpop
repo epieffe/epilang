@@ -7,17 +7,36 @@ use std::str::FromStr;
 grammar;
 
 pub AST: AST = {
-    <left:AST> ";" <right:Assignment> => AST::Concatenation{ left: Box::new(left), right: Box::new(right) },
+    <left:AST> ";" <right:Assignment> => {
+        AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
+    },
     Assignment,
 }
 
 Term: AST = {
     "let" <Identifier> => AST::Definition(<>),
-    "if" <exp:AST> "{" <thn:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(AST::Constant(Constant::Unit)) },
-    "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => AST::Condition{ exp: Box::new(exp), then_block: Box::new(thn), else_block: Box::new(els) },
+    "if" <exp:AST> "{" <thn:AST> "}" => {
+        AST::Condition{
+            exp: Box::new(exp),
+            then_block: Box::new(thn),
+            else_block: Box::new(AST::Constant(Constant::Unit))
+        }
+    },
+    "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => {
+        AST::Condition{
+            exp: Box::new(exp),
+            then_block: Box::new(thn),
+            else_block: Box::new(els)
+        }
+    },
     "{" <AST> "}" => AST::Block(Box::new(<>)),
     "(" <AST> ")" => AST::Block(Box::new(<>)),
-    "|" <args:Comma<Identifier>> "|" "{" <exp:AST> "}" => AST::Closure { args: args, exp: Box::new(exp) },
+    "fn" "(" ")" "{" <exp:AST> "}" => {
+        AST::Closure { args: Vec::new(), exp: Box::new(exp) }
+    },
+    "fn" "(" <args:Comma<Identifier>> ")" "{" <exp:AST> "}" => {
+        AST::Closure { args: args, exp: Box::new(exp) }
+    },
     IntNum => AST::Constant(Constant::Int(<>)),
     FloatNum => AST::Constant(Constant::Float(<>)),
     StringLiteral => AST::Constant(Constant::String(<>)),
@@ -26,12 +45,16 @@ Term: AST = {
 }
 
 Assignment: AST = {
-    <left:Assignment> "=" <right:Disjunction> => AST::Assignment(Box::new(left), Box::new(right)),
+    <left:Assignment> "=" <right:Disjunction> => {
+        AST::Assignment(Box::new(left), Box::new(right))
+    },
     Disjunction
 }
 
 Disjunction: AST = {
-    <exp1:Disjunction> <op:DisjOp> <exp2:Conjunction> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
+    <exp1:Disjunction> <op:DisjOp> <exp2:Conjunction> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
     Conjunction,
 }
 
@@ -40,7 +63,9 @@ DisjOp: BinaryOpcode = {
 }
 
 Conjunction: AST = {
-    <exp1:Conjunction> <op:ConjOp> <exp2:Comparison> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
+    <exp1:Conjunction> <op:ConjOp> <exp2:Comparison> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
     Comparison,
 }
 
@@ -49,7 +74,9 @@ ConjOp: BinaryOpcode = {
 }
 
 Comparison: AST = {
-    <exp1:Comparison> <op:CompareOp> <exp2:Summ> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
+    <exp1:Comparison> <op:CompareOp> <exp2:Summ> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
     Summ,
 }
 
@@ -63,7 +90,9 @@ CompareOp: BinaryOpcode = {
 }
 
 Summ: AST = {
-    <exp1:Summ> <op:SummOp> <exp2:Factor> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
+    <exp1:Summ> <op:SummOp> <exp2:Factor> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
     Factor,
 }
 
@@ -73,7 +102,9 @@ SummOp: BinaryOpcode = {
 }
 
 Factor: AST = {
-    <exp1:Factor> <op:FactorOp> <exp2:UnaryResult> => AST::BinaryOp(Box::new(exp1), op, Box::new(exp2)),
+    <exp1:Factor> <op:FactorOp> <exp2:UnaryResult> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
     UnaryResult,
 }
 
@@ -92,7 +123,12 @@ UnaryOp: UnaryOpcode = {
 }
 
 FunctionCall: AST = {
-    <fun:FunctionCall> "(" <args:Comma<AST>> ")" => AST::FunctionCall { fun: Box::new(fun), args: args},
+    <fun:FunctionCall> "(" ")" => {
+        AST::FunctionCall { fun: Box::new(fun), args: Vec::new()}
+    },
+    <fun:FunctionCall> "(" <args:Comma<AST>> ")" => {
+        AST::FunctionCall { fun: Box::new(fun), args: args}
+    },
     Term,
 }
 

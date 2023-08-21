@@ -22,8 +22,8 @@ impl Value {
             Value::Bool(b) => *b,
             Value::Int(i) => *i != 0,
             Value::Float(f) => *f != 0.0,
-            Value::String(s) => s != "",
-            Value::Function(_) => false,
+            Value::String(s) => !s.is_empty(),
+            Value::Function(_) => true,
         }
     }
 
@@ -59,7 +59,7 @@ impl fmt::Display for Value {
             Value::Float(float) => write!(f, "{}", float),
             Value::Bool(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
-            Value::Function(_) => write!(f, "Value::Function")
+            Value::Function(func) => write!(f, "[Function {:p}]", func),
         }
     }
 }
@@ -121,18 +121,6 @@ impl V {
             V::Ptr(ptr) => ptr.as_ref(),
             V::Val(value) => value
         }
-    }
-}
-
-impl PartialEq for V {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_ref() == other.as_ref()
-    }
-}
-
-impl PartialEq<Value> for V {
-    fn eq(&self, other: &Value) -> bool {
-        self.as_ref() == other
     }
 }
 

@@ -33,7 +33,7 @@ impl Display for AST {
                 write!(f, "(if {} {{{}}} else {{{}}})", exp, then_block, else_block)
             },
             AST::Closure { args, exp } => {
-                write!(f, "fn (")?;
+                write!(f, "fn(")?;
                 for arg in args {
                     write!(f, "{}, ", arg)?;
                 }
