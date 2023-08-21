@@ -147,6 +147,18 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
             result
         },
 
+        Exp::List { elements } => {
+            let mut list = Vec::with_capacity(elements.len());
+            for element in elements {
+                let value = match evaluate(element, stack, stack_start)? {
+                    V::Ptr(p) => p,
+                    V::Val(v) => Pointer::from(Box::new(v)),
+                };
+                list.push(value)
+            }
+            Ok(V::Val(Value::List(list)))
+        }
+
         Exp::Closure { num_args, exp } => {
             let function = Function {
                 num_args: *num_args,

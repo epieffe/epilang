@@ -12,6 +12,7 @@ pub enum Value {
     Float(f32),
     Bool(bool),
     String(String),
+    List(Vec<Pointer>),
     Function(Function),
 }
 
@@ -23,6 +24,7 @@ impl Value {
             Value::Int(i) => *i != 0,
             Value::Float(f) => *f != 0.0,
             Value::String(s) => !s.is_empty(),
+            Value::List(l) => !l.is_empty(),
             Value::Function(_) => true,
         }
     }
@@ -34,6 +36,7 @@ impl Value {
             Value::Int(_) => Type::Int,
             Value::Float(_) => Type::Float,
             Value::String(_) => Type::String,
+            Value::List(_) => Type::List,
             Value::Function(_) => Type::Function,
         }
     }
@@ -58,7 +61,14 @@ impl fmt::Display for Value {
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(float) => write!(f, "{}", float),
             Value::Bool(b) => write!(f, "{}", b),
-            Value::String(s) => write!(f, "{}", s),
+            Value::String(s) => write!(f, "\"{}\"", s),
+            Value::List(l) => {
+                write!(f, "[")?;
+                for elem in l {
+                    write!(f, "{}, ", elem)?;
+                }
+                write!(f, "]")
+            },
             Value::Function(func) => write!(f, "[Function {:p}]", func),
         }
     }
@@ -104,8 +114,8 @@ impl fmt::Display for Pointer {
 
 #[derive(Debug)]
 pub enum V {
-    Val(Value),
     Ptr(Pointer),
+    Val(Value),
 }
 
 impl V {

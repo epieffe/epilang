@@ -82,6 +82,14 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
             })
         },
 
+        AST::List { elements } => {
+            let mut list = Vec::with_capacity(elements.len());
+            for element in elements {
+                list.push(compile(element, frame)?)
+            }
+            Ok(Exp::List { elements: list })
+        },
+
         AST::Closure { args, exp } => {
             let mut function_frame: Frame = Default::default();
             for arg in args {

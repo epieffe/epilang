@@ -13,6 +13,7 @@ pub enum Exp {
     Assignment { left: Box<Exp>, right: Box<Exp> },
     Block { exp: Box<Exp> },
     Condition { exp: Box<Exp>, then_block: Box<Exp>, else_block: Box<Exp> },
+    List { elements: Vec<Exp> },
     Closure { num_args: usize, exp: Box<Exp> },
     FunctionCall { fun: Box<Exp>, args: Vec<Exp> },
 }

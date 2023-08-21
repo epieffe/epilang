@@ -29,8 +29,8 @@ Term: AST = {
             else_block: Box::new(els)
         }
     },
-    "{" <AST> "}" => AST::Block(Box::new(<>)),
-    "(" <AST> ")" => AST::Block(Box::new(<>)),
+    "[" "]" => AST::List { elements: Vec::new() },
+    "[" <Comma<AST>> "]" => AST::List { elements: <> },
     "fn" "(" ")" "{" <exp:AST> "}" => {
         AST::Closure { args: Vec::new(), exp: Box::new(exp) }
     },
@@ -42,6 +42,8 @@ Term: AST = {
     StringLiteral => AST::Constant(Constant::String(<>)),
     BoolLiteral => AST::Constant(Constant::Bool(<>)),
     Identifier => AST::Identifier(<>),
+    "{" <AST> "}" => AST::Block(Box::new(<>)),
+    "(" <AST> ")" => <>,
 }
 
 Assignment: AST = {
