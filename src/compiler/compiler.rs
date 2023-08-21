@@ -82,6 +82,12 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
             })
         },
 
+        AST::While {guard, exp } => {
+            let guard = compile(guard, frame)?;
+            let exp = compile(exp, frame)?;
+            Ok(Exp::While { guard: Box::new(guard), exp: Box::new(exp) })
+        },
+
         AST::List { elements } => {
             let mut list = Vec::with_capacity(elements.len());
             for element in elements {

@@ -152,6 +152,14 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
             result
         },
 
+        Exp::While { guard, exp } => {
+            loop {
+                if !evaluate(guard, stack, stack_start)?.as_bool() { break }
+                evaluate(exp, stack, stack_start)?;
+            }
+            Ok(V::Val(Value::Unit))
+        }
+
         Exp::List { elements } => {
             let mut list = Vec::with_capacity(elements.len());
             for element in elements {

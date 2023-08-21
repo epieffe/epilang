@@ -14,6 +14,7 @@ pub enum AST {
     Assignment(Box<AST>, Box<AST>),
     Block(Box<AST>),
     Condition { exp: Box<AST>, then_block: Box<AST>, else_block: Box<AST> },
+    While { guard: Box<AST>, exp: Box<AST> },
     List { elements: Vec<AST> },
     Subscript { element: Box<AST>, index: Box<AST> },
     Closure { args: Vec<String>, exp: Box<AST> },
@@ -33,6 +34,9 @@ impl Display for AST {
             AST::Block(e) => write!(f, "({{{}}})", e),
             AST::Condition{ exp, then_block, else_block } => {
                 write!(f, "(if {} {{{}}} else {{{}}})", exp, then_block, else_block)
+            },
+            AST::While { guard, exp } => {
+                write!(f, "while {} {{{}}}", guard, exp)
             },
             AST::List { elements } => {
                 write!(f, "[")?;

@@ -16,18 +16,21 @@ pub AST: AST = {
 Term: AST = {
     "let" <Identifier> => AST::Definition(<>),
     "if" <exp:AST> "{" <thn:AST> "}" => {
-        AST::Condition{
+        AST::Condition {
             exp: Box::new(exp),
             then_block: Box::new(thn),
             else_block: Box::new(AST::Constant(Constant::Unit))
         }
     },
     "if" <exp:AST> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => {
-        AST::Condition{
+        AST::Condition {
             exp: Box::new(exp),
             then_block: Box::new(thn),
             else_block: Box::new(els)
         }
+    },
+    "while" <guard:AST> "{" <exp:AST> "}" => {
+        AST::While { guard: Box::new(guard), exp: Box::new(exp) }
     },
     "[" "]" => AST::List { elements: Vec::new() },
     "[" <Comma<AST>> "]" => AST::List { elements: <> },
