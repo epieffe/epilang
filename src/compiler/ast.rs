@@ -15,6 +15,7 @@ pub enum AST {
     Block(Box<AST>),
     Condition { exp: Box<AST>, then_block: Box<AST>, else_block: Box<AST> },
     List { elements: Vec<AST> },
+    Subscript { element: Box<AST>, index: Box<AST> },
     Closure { args: Vec<String>, exp: Box<AST> },
     FunctionCall { fun: Box<AST>, args: Vec<AST> },
 }
@@ -39,7 +40,10 @@ impl Display for AST {
                     write!(f, "{}, ", element)?;
                 }
                 write!(f, "]")
-            }
+            },
+            AST::Subscript { element, index } => {
+                write!(f, "{}[{}]", element, index)
+            },
             AST::Closure { args, exp } => {
                 write!(f, "fn(")?;
                 for arg in args {

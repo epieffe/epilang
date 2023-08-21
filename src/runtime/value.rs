@@ -64,8 +64,11 @@ impl fmt::Display for Value {
             Value::String(s) => write!(f, "\"{}\"", s),
             Value::List(l) => {
                 write!(f, "[")?;
-                for elem in l {
-                    write!(f, "{}, ", elem)?;
+                if l.len() > 0 {
+                    for i in 0..l.len() - 1 {
+                        write!(f, "{}, ", l[i])?;
+                    }
+                    write!(f, "{}", l[l.len() - 1])?;
                 }
                 write!(f, "]")
             },

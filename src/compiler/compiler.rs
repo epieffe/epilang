@@ -90,6 +90,12 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
             Ok(Exp::List { elements: list })
         },
 
+        AST::Subscript { element, index } => {
+            let e = compile(element, frame)?;
+            let i = compile(index, frame)?;
+            Ok(Exp::Subscript { element: Box::new(e), index: Box::new(i) })
+        }
+
         AST::Closure { args, exp } => {
             let mut function_frame: Frame = Default::default();
             for arg in args {

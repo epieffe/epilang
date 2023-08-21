@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+use crate::intermediate::constant::Type;
 use crate::intermediate::exp::Exp;
 use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
@@ -10,12 +11,16 @@ use super::value::{V, Value, Pointer, Function};
 pub enum ExpressionError {
     #[error("OperationError: {0}")]
     OperationError(OperationError),
-    #[error("Variable {0} is not defined")]
-    UndefinedVariable(String),
+    #[error("RuntimeError: list index out of range")]
+    ListIndexOutofRange(),
     #[error("TypeError: {0} is not callable")]
-    ValueNotCallable(Value),
+    ValueNotCallable(Type),
     #[error("TypeError: function requires {0} positional argument(s) but {1} was given")]
     WrongArgumentsNumber(usize, usize),
+    #[error("TypeError: {0} is not subscriptable")]
+    NotSubscriptable(Type),
+    #[error("TypeError: {0} indices must be integers, not {1}")]
+    IndexTypeError(Type, Type)
 }
 
 pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Result<V, ExpressionError> {
@@ -159,6 +164,19 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
             Ok(V::Val(Value::List(list)))
         }
 
+        Exp::Subscript { element, index } => {
+            let e = evaluate(element, stack, stack_start)?;
+            let i = evaluate(index, stack, stack_start)?;
+            let value = match (e.as_ref(), i.as_ref()) {
+                (Value::List(values), Value::Int(i)) => {
+                    values.get(*i as usize).ok_or(ExpressionError::ListIndexOutofRange())
+                },
+                (v, Value::Int(_)) => Err(ExpressionError::NotSubscriptable(v.get_type())),
+                (v, i) => Err(ExpressionError::IndexTypeError(v.get_type(), i.get_type()))
+            };
+            Ok(V::Ptr(*value?))
+        }
+
         Exp::Closure { num_args, exp } => {
             let function = Function {
                 num_args: *num_args,
@@ -187,7 +205,7 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                         Err(ExpressionError::WrongArgumentsNumber(f.num_args, args.len()))
                     }
                 },
-                _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().clone()))
+                _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().get_type()))
             }
         },
     }

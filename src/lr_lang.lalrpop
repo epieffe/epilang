@@ -116,26 +116,31 @@ FactorOp: BinaryOpcode = {
 }
 
 UnaryResult: AST = {
-    <op:UnaryOp> <exp:FunctionCall> => AST::UnaryOp(op, Box::new(exp)),
-    FunctionCall,
+    <op:UnaryOp> <exp:CallOrSubscript> => AST::UnaryOp(op, Box::new(exp)),
+    CallOrSubscript,
 }
 
 UnaryOp: UnaryOpcode = {
     "!" => UnaryOpcode::Not,
 }
 
-FunctionCall: AST = {
-    <fun:FunctionCall> "(" ")" => {
+CallOrSubscript: AST = {
+    // Function call
+    <fun:CallOrSubscript> "(" ")" => {
         AST::FunctionCall { fun: Box::new(fun), args: Vec::new()}
     },
-    <fun:FunctionCall> "(" <args:Comma<AST>> ")" => {
+    <fun:CallOrSubscript> "(" <args:Comma<AST>> ")" => {
         AST::FunctionCall { fun: Box::new(fun), args: args}
+    },
+    // List subscript
+    <list:CallOrSubscript> "[" <index:AST> "]" => {
+        AST::Subscript { element: Box::new(list), index: Box::new(index)}
     },
     Term,
 }
 
 Identifier: String = {
-    r"[a-zA-Z][a-zA-z_0-9]*" => <>.to_owned()
+    r"[a-zA-Z][a-zA-Z_0-9]*" => <>.to_owned()
 }
 
 IntNum: i32 = {

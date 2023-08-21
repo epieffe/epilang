@@ -23,7 +23,7 @@ pub enum ProgramError {
     SyntaxError(String),
     #[error("CompilerError: {0}")]
     CompilerError(CompilerError),
-    #[error("RuntimeError: {0}")]
+    #[error("{0}")]
     RuntimeError(ExpressionError),
 }
 
