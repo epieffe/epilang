@@ -6,6 +6,14 @@ use std::str::FromStr;
 
 grammar;
 
+// Skip comments
+match {
+    r"\s*" => { },
+    r"//[^\n\r]*[\n\r]*" => { },
+    r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/" => { },
+    _
+}
+
 pub AST: AST = {
     <left:AST> ";" <right:Assignment> => {
         AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
