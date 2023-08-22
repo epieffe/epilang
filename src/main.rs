@@ -10,7 +10,7 @@ use std::fs;
 use thiserror::Error;
 use rustyline::Editor;
 
-use compiler::lr_lang::ASTParser;
+use compiler::lr_lang::EpilangParser;
 use compiler::frame::Frame;
 use compiler::compiler::compile;
 use compiler::error::CompilerError;
@@ -58,7 +58,6 @@ pub fn repl() {
     loop {
         match rl.readline("epilang> ") {
             Ok(line) => {
-                if line.trim().is_empty() { continue };
                 rl.add_history_entry(line.as_str());
                 match run_program(line, &mut frame, &mut stack) {
                     Ok(v) => {
@@ -76,7 +75,7 @@ pub fn repl() {
 }
 
 fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
-    let ast = ASTParser::new().parse(&line)
+    let ast = EpilangParser::new().parse(&line)
         .map_err(|e| { ProgramError::SyntaxError(e.to_string()) })?;
 
     let exp = compile(&ast, frame)
