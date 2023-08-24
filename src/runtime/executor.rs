@@ -122,13 +122,22 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
 
         Exp::Assignment { left, right } => {
             let right_v: V = evaluate(right, stack, stack_start)?;
+            let ptr = match right_v {
+                V::Ptr(p) => p,
+                V::Val(value) => Pointer::from(Box::new(value)),
+            };
             match left.as_ref() {
-                Exp::Variable { scope } => match right_v {
-                    V::Ptr(ptr) => stack[scope + stack_start] = ptr,
-                    V::Val(value) => stack[scope + stack_start] = Pointer::from(Box::new(value)),
-                },
-                // This should never happen if program was compiled correctly
-                _ => panic!("Invalid left-expression in assignment"),
+                Exp::Variable { scope } => stack[scope + stack_start] = ptr,
+
+                Exp::Subscript { element, index } => {
+                    let mut e = evaluate(element, stack, stack_start)?;
+                    let i = evaluate(index, stack, stack_start)?;
+                    let value_ptr = subscript(e.as_mut_ref(), i.as_ref())?;
+                    *value_ptr = ptr;
+
+                }
+
+                _ => panic!("Invalid left-expression in assignments are detected at compile time"),
             }
             Ok(V::Val(Value::Unit))
         },
@@ -173,16 +182,10 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
         }
 
         Exp::Subscript { element, index } => {
-            let e = evaluate(element, stack, stack_start)?;
+            let mut e = evaluate(element, stack, stack_start)?;
             let i = evaluate(index, stack, stack_start)?;
-            let value = match (e.as_ref(), i.as_ref()) {
-                (Value::List(values), Value::Int(i)) => {
-                    values.get(*i as usize).ok_or(ExpressionError::ListIndexOutofRange())
-                },
-                (v, Value::Int(_)) => Err(ExpressionError::NotSubscriptable(v.get_type())),
-                (v, i) => Err(ExpressionError::IndexTypeError(v.get_type(), i.get_type()))
-            };
-            Ok(V::Ptr(*value?))
+            let value_ptr = subscript(e.as_mut_ref(), i.as_ref())?;
+            Ok(V::Ptr(*value_ptr))
         }
 
         Exp::Closure { num_args, exp } => {
@@ -216,5 +219,15 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                 _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().get_type()))
             }
         },
+    }
+}
+
+fn subscript<'a, 'b>(element: &'a mut Value, index: &'b Value) -> Result<&'a mut Pointer, ExpressionError> {
+    match (element, index) {
+        (Value::List(values), Value::Int(i)) => {
+            values.get_mut(*i as usize).ok_or(ExpressionError::ListIndexOutofRange())
+        },
+        (v, Value::Int(_)) => Err(ExpressionError::NotSubscriptable(v.get_type())),
+        (v, i) => Err(ExpressionError::IndexTypeError(v.get_type(), i.get_type()))
     }
 }

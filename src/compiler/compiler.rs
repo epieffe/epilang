@@ -51,7 +51,7 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
                         })
                     })
                 },
-                Exp::Variable { scope: _ } => {
+                Exp::Variable { scope: _ } | Exp::Subscript { element: _, index: _ } => {
                     Ok(Exp::Assignment {
                         left: Box::new(left_exp),
                         right: Box::new(right_exp)

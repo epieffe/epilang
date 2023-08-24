@@ -101,6 +101,10 @@ impl Pointer {
     pub fn as_ref(&self) -> &Value {
         unsafe{ &*self.value }
     }
+
+    pub fn as_mut_ref(&mut self) -> &mut Value {
+        unsafe{ &mut *self.value }
+    }
 }
 
 impl From<Box<Value>> for Pointer {
@@ -132,6 +136,13 @@ impl V {
     pub fn as_ref(&self) -> &Value {
         match self {
             V::Ptr(ptr) => ptr.as_ref(),
+            V::Val(value) => value
+        }
+    }
+
+    pub fn as_mut_ref(&mut self) -> &mut Value {
+        match self {
+            V::Ptr(ptr) => ptr.as_mut_ref(),
             V::Val(value) => value
         }
     }
