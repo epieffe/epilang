@@ -57,9 +57,20 @@ pub fn repl() {
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
     loop {
         match rl.readline("epilang> ") {
-            Ok(line) => {
-                rl.add_history_entry(line.as_str());
-                match run_program(line, &mut frame, &mut stack) {
+            Ok(mut text) => {
+                if text.trim().is_empty() { continue };
+                rl.add_history_entry(text.as_str());
+                while continue_reading(text.as_str()) {
+                    match rl.readline("... ") {
+                        Ok(next_line) => {
+                            rl.add_history_entry(next_line.as_str());
+                            text.push('\n');
+                            text.push_str(next_line.as_str())
+                        },
+                        Err(_) => break
+                    }
+                }
+                match run_program(text, &mut frame, &mut stack) {
                     Ok(v) => {
                         match v.as_ref() {
                             Value::Unit => (),
@@ -85,4 +96,27 @@ fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Res
         .map_err(|e| { ProgramError::RuntimeError(e) })?;
 
     Ok(v)
+}
+
+/// Used in the REPL to check if some string is ready to be evaluated
+/// or if the REPL must continue reading
+fn continue_reading(text: &str) -> bool {
+    if text.trim_end().ends_with('.') {
+        return true
+    }
+    let mut round_brackets_count = 0;
+    let mut square_brackets_count = 0;
+    let mut curly_brackets_count = 0;
+    for c in text.chars() {
+        match c {
+            '(' => round_brackets_count += 1,
+            '[' => square_brackets_count += 1,
+            '{' => curly_brackets_count += 1,
+            ')' => round_brackets_count -= 1,
+            ']' => square_brackets_count -= 1,
+            '}' => curly_brackets_count -= 1,
+            _ => ()
+        }
+    }
+    round_brackets_count > 0 || square_brackets_count > 0 || curly_brackets_count > 0
 }
