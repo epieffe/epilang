@@ -1,0 +1,10 @@
+let x;
+x = 3;
+let y = 5;
+if x + y < 9 {
+    let z = 11;
+    z
+} else {
+    let wa = 99;
+    wa
+}

@@ -1,0 +1,194 @@
+use crate::compiler::ast::AST;
+use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
+use crate::intermediate::constant::Constant;
+
+use std::str::FromStr;
+
+grammar;
+
+// Skip comments
+match {
+    r"\s*" => { },
+    r"//[^\n\r]*[\n\r]*" => { },
+    r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/" => { },
+    _
+}
+
+pub Epilang: AST = {
+    <ast:AST?> => match ast {
+        None => AST::Constant(Constant::Unit),
+        Some(exp) => exp
+    }
+}
+
+AST: AST = {
+    <exp:Concatenation> ";" => {
+        AST::Concatenation{ left: Box::new(exp), right: Box::new(AST::Constant(Constant::Unit)) }
+    },
+    Concatenation,
+}
+
+Concatenation: AST = {
+    <left:Concatenation> ";" <right:Assignment> => {
+        AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
+    },
+    Assignment,
+}
+
+Term: AST = {
+    "let" <Identifier> => AST::Definition(<>),
+    "if" <exp:Concatenation> "{" <thn:AST> "}" => {
+        AST::Condition {
+            exp: Box::new(exp),
+            then_block: Box::new(thn),
+            else_block: Box::new(AST::Constant(Constant::Unit))
+        }
+    },
+    "if" <exp:Concatenation> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => {
+        AST::Condition {
+            exp: Box::new(exp),
+            then_block: Box::new(thn),
+            else_block: Box::new(els)
+        }
+    },
+    "while" <guard:Concatenation> "{" <exp:AST> "}" => {
+        AST::While { guard: Box::new(guard), exp: Box::new(exp) }
+    },
+    "[" "]" => AST::List { elements: Vec::new() },
+    "[" <Comma<AST>> "]" => AST::List { elements: <> },
+    "fn" "(" ")" "{" <exp:AST> "}" => {
+        AST::Closure { args: Vec::new(), exp: Box::new(exp) }
+    },
+    "fn" "(" <args:Comma<Identifier>> ")" "{" <exp:AST> "}" => {
+        AST::Closure { args: args, exp: Box::new(exp) }
+    },
+    IntNum => AST::Constant(Constant::Int(<>)),
+    FloatNum => AST::Constant(Constant::Float(<>)),
+    StringLiteral => AST::Constant(Constant::String(<>)),
+    BoolLiteral => AST::Constant(Constant::Bool(<>)),
+    Identifier => AST::Identifier(<>),
+    "{" <AST> "}" => AST::Block(Box::new(<>)),
+    "(" <AST> ")" => <>,
+}
+
+Assignment: AST = {
+    <left:Assignment> "=" <right:Disjunction> => {
+        AST::Assignment(Box::new(left), Box::new(right))
+    },
+    Disjunction
+}
+
+Disjunction: AST = {
+    <exp1:Disjunction> <op:DisjOp> <exp2:Conjunction> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
+    Conjunction,
+}
+
+DisjOp: BinaryOpcode = {
+    "||" => BinaryOpcode::Or,
+}
+
+Conjunction: AST = {
+    <exp1:Conjunction> <op:ConjOp> <exp2:Comparison> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
+    Comparison,
+}
+
+ConjOp: BinaryOpcode = {
+    "&&" => BinaryOpcode::And,
+}
+
+Comparison: AST = {
+    <exp1:Comparison> <op:CompareOp> <exp2:Summ> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
+    Summ,
+}
+
+CompareOp: BinaryOpcode = {
+    "==" => BinaryOpcode::Equals,
+    "!=" => BinaryOpcode::NotEquals,
+    "<" => BinaryOpcode::Lower,
+    ">" => BinaryOpcode::Greater,
+    "<=" => BinaryOpcode::LowerEquals,
+    ">=" => BinaryOpcode::GreaterEquals,
+}
+
+Summ: AST = {
+    <exp1:Summ> <op:SummOp> <exp2:Factor> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
+    Factor,
+}
+
+SummOp: BinaryOpcode = {
+    "+" => BinaryOpcode::Add,
+    "-" => BinaryOpcode::Sub,
+}
+
+Factor: AST = {
+    <exp1:Factor> <op:FactorOp> <exp2:UnaryResult> => {
+        AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
+    },
+    UnaryResult,
+}
+
+FactorOp: BinaryOpcode = {
+    "*" => BinaryOpcode::Mul,
+    "/" => BinaryOpcode::Div,
+}
+
+UnaryResult: AST = {
+    <op:UnaryOp> <exp:CallOrSubscript> => AST::UnaryOp(op, Box::new(exp)),
+    CallOrSubscript,
+}
+
+UnaryOp: UnaryOpcode = {
+    "!" => UnaryOpcode::Not,
+}
+
+CallOrSubscript: AST = {
+    // Function call
+    <fun:CallOrSubscript> "(" ")" => {
+        AST::FunctionCall { fun: Box::new(fun), args: Vec::new()}
+    },
+    <fun:CallOrSubscript> "(" <args:Comma<AST>> ")" => {
+        AST::FunctionCall { fun: Box::new(fun), args: args}
+    },
+    // List subscript
+    <list:CallOrSubscript> "[" <index:AST> "]" => {
+        AST::Subscript { element: Box::new(list), index: Box::new(index)}
+    },
+    Term,
+}
+
+Identifier: String = {
+    r"[a-zA-Z][a-zA-Z_0-9]*" => <>.to_owned()
+}
+
+IntNum: i32 = {
+    r"-?[0-9]+" => i32::from_str(<>).unwrap()
+}
+
+FloatNum: f32 = {
+    r"-?[0-9]+\.[0-9]+" => f32::from_str(<>).unwrap()
+}
+
+StringLiteral: String = {
+    r#""[^"]*""# => <>[1..<>.len() - 1].to_owned()
+}
+
+BoolLiteral: bool = {
+    "true" => true,
+    "false" => false,
+}
+
+Comma<T>: Vec<T> = {
+    <e:T> => vec![e],
+    <mut list:Comma<T>> "," <e:T> => {
+        list.push(e);
+        list
+    }
+};
