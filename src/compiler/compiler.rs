@@ -102,14 +102,13 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
             Ok(Exp::Subscript { element: Box::new(e), index: Box::new(i) })
         }
 
-        AST::Closure { args, exp } => {
-            let mut function_frame: Frame = Default::default();
-            for arg in args {
-                function_frame.define_variable(arg.clone());
-            }
-            let exp = compile(exp, &mut function_frame)?;
-            Ok(Exp::Closure { num_args: args.len(), exp: Box::new(exp) })
+        AST::Function { name, args, exp } => {
+            // Function is assigned to a new variable in current scope
+            frame.define_variable(name.clone());
+            compile_function(Some(name), args, exp, frame)
         },
+
+        AST::Closure { args, exp } => compile_function(None, args, exp, frame),
 
         AST::FunctionCall { fun, args } => {
             let fun_exp = compile(fun, frame)?;
@@ -121,4 +120,25 @@ pub fn compile(ast: &AST, frame: &mut Frame) -> Result<Exp, CompilerError> {
             Ok(Exp::FunctionCall { fun: Box::new(fun_exp), args: args_exps })
         }
     }
+}
+
+fn compile_function(name: Option<&str>, args: &Vec<String>, body: &AST, _frame: &mut Frame) -> Result<Exp, CompilerError> {
+    let mut function_frame: Frame = Default::default();
+    if name.is_some() {
+        // Function is assigned to a variable in its own scope to enable recursion
+        function_frame.define_variable(name.unwrap().to_owned());
+    }
+    for arg in args {
+        function_frame.define_variable(arg.clone());
+    }
+    let body = Box::new(compile(body, &mut function_frame)?);
+    // TODO: extract external variables from frame
+    let external_vars = Vec::new();
+    Ok(
+        if name.is_some() {
+            Exp::Function { num_args: args.len(), external_vars, exp: body }
+        } else {
+            Exp::Closure { num_args: args.len(), external_vars, exp: body }
+        }
+    )
 }

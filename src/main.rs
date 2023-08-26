@@ -10,7 +10,7 @@ use std::fs;
 use thiserror::Error;
 use rustyline::Editor;
 
-use compiler::lr_lang::EpilangParser;
+use compiler::epilang::EpilangParser;
 use compiler::frame::Frame;
 use compiler::compiler::compile;
 use compiler::error::CompilerError;

@@ -136,8 +136,8 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                     *value_ptr = ptr;
 
                 }
-
-                _ => panic!("Invalid left-expression in assignments are detected at compile time"),
+                // Invalid left-expression in assignments are detected at compile time
+                _ => unreachable!(),
             }
             Ok(V::Val(Value::Unit))
         },
@@ -188,10 +188,31 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
             Ok(V::Ptr(*value_ptr))
         }
 
-        Exp::Closure { num_args, exp } => {
+        Exp::Function { num_args, external_vars, exp } => {
             let function = Function {
                 num_args: *num_args,
                 external_values: Vec::new(),
+                body: exp.clone(),
+            };
+            let function_ptr = Pointer::from(Box::new(Value::Function(function)));
+            match function_ptr.clone().as_mut_ref() {
+                Value::Function(f) => {
+                    // Push self reference as external value to enable recursion
+                    f.external_values.push(function_ptr);
+                    // Push external values to function stack
+                    f.external_values.append(&mut external_vars.iter().map(|var| {stack[*var + stack_start]}).collect())
+                },
+                _ => unreachable!()
+            }
+            stack.push(function_ptr);
+            Ok(V::Ptr(function_ptr))
+        },
+
+        Exp::Closure { num_args, external_vars, exp } => {
+            let external_values = external_vars.iter().map(|var| {stack[*var + stack_start]}).collect();
+            let function = Function {
+                num_args: *num_args,
+                external_values: external_values,
                 body: exp.clone(),
             };
             Ok(V::Val(Value::Function(function)))
@@ -203,6 +224,9 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                 Value::Function(f) => {
                     if args.len() == f.num_args {
                         let function_stack_start = stack.len();
+                        for external_value in &f.external_values {
+                            stack.push(*external_value);
+                        }
                         for arg in args {
                             match evaluate(arg, stack, stack_start)? {
                                 V::Ptr(ptr) => stack.push(ptr),

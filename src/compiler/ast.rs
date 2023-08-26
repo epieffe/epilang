@@ -17,6 +17,7 @@ pub enum AST {
     While { guard: Box<AST>, exp: Box<AST> },
     List { elements: Vec<AST> },
     Subscript { element: Box<AST>, index: Box<AST> },
+    Function { name: String, args: Vec<String>, exp: Box<AST> },
     Closure { args: Vec<String>, exp: Box<AST> },
     FunctionCall { fun: Box<AST>, args: Vec<AST> },
 }
@@ -47,6 +48,13 @@ impl Display for AST {
             },
             AST::Subscript { element, index } => {
                 write!(f, "{}[{}]", element, index)
+            },
+            AST::Function { name, args, exp } => {
+                write!(f, "fn {}(", name)?;
+                for arg in args {
+                    write!(f, "{}, ", arg)?;
+                }
+                write!(f, ") {{{}}}", exp)
             },
             AST::Closure { args, exp } => {
                 write!(f, "fn(")?;

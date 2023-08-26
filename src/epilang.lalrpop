@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 grammar;
 
-// Skip comments
+// Skip comments and whitespaces
 match {
     r"\s*" => { },
     r"//[^\n\r]*[\n\r]*" => { },
@@ -28,15 +28,7 @@ AST: AST = {
     Concatenation,
 }
 
-Concatenation: AST = {
-    <left:Concatenation> ";" <right:Assignment> => {
-        AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
-    },
-    Assignment,
-}
-
-Term: AST = {
-    "let" <Identifier> => AST::Definition(<>),
+Conditional: AST = {
     "if" <exp:Concatenation> "{" <thn:AST> "}" => {
         AST::Condition {
             exp: Box::new(exp),
@@ -51,24 +43,45 @@ Term: AST = {
             else_block: Box::new(els)
         }
     },
+}
+
+Loop: AST = {
     "while" <guard:Concatenation> "{" <exp:AST> "}" => {
         AST::While { guard: Box::new(guard), exp: Box::new(exp) }
     },
-    "[" "]" => AST::List { elements: Vec::new() },
-    "[" <Comma<AST>> "]" => AST::List { elements: <> },
-    "fn" "(" ")" "{" <exp:AST> "}" => {
-        AST::Closure { args: Vec::new(), exp: Box::new(exp) }
+}
+
+Function: AST = {
+    // Function declaration
+    "fn" <name:Identifier> "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
+        AST::Function { name: name, args: args.unwrap_or(Vec::new()), exp: Box::new(exp) }
     },
-    "fn" "(" <args:Comma<Identifier>> ")" "{" <exp:AST> "}" => {
-        AST::Closure { args: args, exp: Box::new(exp) }
+    // Anonymous function
+    "fn" "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
+        AST::Closure { args: args.unwrap_or(Vec::new()), exp: Box::new(exp) }
     },
+}
+
+Term: AST = {
+    "let" <Identifier> => AST::Definition(<>),
+    "[" <elems:Comma<AST>?> "]" => AST::List { elements: elems.unwrap_or(Vec::new()) },
     IntNum => AST::Constant(Constant::Int(<>)),
     FloatNum => AST::Constant(Constant::Float(<>)),
     StringLiteral => AST::Constant(Constant::String(<>)),
     BoolLiteral => AST::Constant(Constant::Bool(<>)),
     Identifier => AST::Identifier(<>),
     "{" <AST> "}" => AST::Block(Box::new(<>)),
-    "(" <AST> ")" => <>,
+    "(" <AST> ")",
+    Conditional,
+    Loop,
+    Function
+}
+
+Concatenation: AST = {
+    <left:Concatenation> ";" <right:Assignment> => {
+        AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
+    },
+    Assignment,
 }
 
 Assignment: AST = {

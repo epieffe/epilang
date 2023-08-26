@@ -16,6 +16,7 @@ pub enum Exp {
     While { guard: Box<Exp>, exp: Box<Exp> },
     List { elements: Vec<Exp> },
     Subscript { element: Box<Exp>, index: Box<Exp> },
-    Closure { num_args: usize, exp: Box<Exp> },
+    Function { num_args: usize, external_vars: Vec<usize>, exp: Box<Exp> },
+    Closure { num_args: usize, external_vars: Vec<usize>, exp: Box<Exp> },
     FunctionCall { fun: Box<Exp>, args: Vec<Exp> },
 }

@@ -80,7 +80,7 @@ impl fmt::Display for Value {
 #[derive(Clone, Debug)]
 pub struct Function {
     pub num_args: usize,
-    pub external_values: Vec<Value>,
+    pub external_values: Vec<Pointer>,
     pub body: Box<Exp>
 }
 
