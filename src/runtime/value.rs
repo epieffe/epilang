@@ -1,9 +1,12 @@
 use std::fmt;
 use std::ptr;
+use std::collections::HashMap;
 
 use crate::intermediate::constant::Constant;
 use crate::intermediate::constant::Type;
 use crate::intermediate::exp::Exp;
+
+use super::pointer::Ptr;
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -75,6 +78,13 @@ impl fmt::Display for Value {
             Value::Function(func) => write!(f, "[Function {:p}]", func),
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct Class {
+    pub name: String,
+    pub fields: Vec<String>,
+    pub methods: HashMap<String, Ptr<Function>>,
 }
 
 #[derive(Clone, Debug)]

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use super::error::CompilerError;
 
@@ -34,5 +35,35 @@ impl <'a> Frame<'a> {
         let var_scope = self.scope;
         self.scope += 1;
         var_scope
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct GlobalContext {
+    class_counter: usize,
+    classes: HashMap<String, usize>,
+}
+
+impl GlobalContext {
+    pub fn class_id(&self, class_name: &str) -> Result<usize, CompilerError> {
+        if let Some(value) = self.classes.get(class_name) {
+            Ok(*value)
+        } else {
+            Err(CompilerError::UndefinedVariable(class_name.to_owned()))
+        }
+    }
+
+    pub fn define_class(&mut self, class_name: String) -> Result<usize, CompilerError> {
+        match self.classes.entry(class_name) {
+            // Error if a class with same name is already defined
+            Occupied(o) => Err(CompilerError::ClassNameAlreadyDeclared(o.key().clone())),
+            // Assign an incremental id to the class name
+            Vacant(v) => {
+                v.insert(self.class_counter);
+                let id = self.class_counter;
+                self.class_counter += 1;
+                Ok(id)
+            },
+        }
     }
 }

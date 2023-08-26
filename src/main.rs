@@ -11,11 +11,12 @@ use thiserror::Error;
 use rustyline::Editor;
 
 use compiler::epilang::EpilangParser;
-use compiler::frame::Frame;
+use compiler::frame::{GlobalContext, Frame};
 use compiler::compiler::compile;
 use compiler::error::CompilerError;
 use runtime::executor::{ExpressionError, evaluate};
-use runtime::value::{Pointer, Value, V};
+use runtime::value::{Value, V};
+use runtime::module::Module;
 
 #[derive(Error, Debug)]
 pub enum ProgramError {
@@ -42,9 +43,10 @@ pub fn run_file(file_path: String) {
         .expect("Unable to read the program file");
 
     let mut frame: Frame = Default::default();
-    let mut stack: Vec<Pointer> = Vec::new();
+    let mut ctx: GlobalContext = Default::default();
+    let mut module: Module = Default::default();
 
-    match run_program(text, &mut frame, &mut stack) {
+    match run_program(text, &mut frame, &mut ctx, &mut module) {
         Ok(v) => println!("Result: {}", v.as_ref()),
         Err(e) => println!("{}", e),
     }
@@ -52,7 +54,8 @@ pub fn run_file(file_path: String) {
 
 pub fn repl() {
     let mut frame: Frame = Default::default();
-    let mut stack: Vec<Pointer> = Vec::new();
+    let mut ctx: GlobalContext = Default::default();
+    let mut module: Module = Default::default();
 
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
     loop {
@@ -70,7 +73,7 @@ pub fn repl() {
                         Err(_) => break
                     }
                 }
-                match run_program(text, &mut frame, &mut stack) {
+                match run_program(text, &mut frame, &mut ctx, &mut module) {
                     Ok(v) => {
                         match v.as_ref() {
                             Value::Unit => (),
@@ -85,14 +88,14 @@ pub fn repl() {
     }
 }
 
-fn run_program(line: String, frame: &mut Frame, stack: &mut Vec<Pointer>) -> Result<V, ProgramError> {
+fn run_program(line: String, frame: &mut Frame, ctx: &mut GlobalContext, module: &mut Module) -> Result<V, ProgramError> {
     let ast = EpilangParser::new().parse(&line)
         .map_err(|e| { ProgramError::SyntaxError(e.to_string()) })?;
 
-    let exp = compile(&ast, frame)
+    let exp = compile(&ast, frame, ctx)
         .map_err(|e| { ProgramError::CompilerError(e) })?;
 
-    let v = evaluate(&exp, stack, 0)
+    let v = evaluate(&exp, module, 0)
         .map_err(|e| { ProgramError::RuntimeError(e) })?;
 
     Ok(v)

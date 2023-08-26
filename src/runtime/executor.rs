@@ -1,11 +1,13 @@
 use thiserror::Error;
 
 use crate::intermediate::constant::Type;
-use crate::intermediate::exp::Exp;
+use crate::intermediate::exp::{Exp, FunctionExp};
 use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 
-use super::value::{V, Value, Pointer, Function};
+use super::module::Module;
+use super::value::{V, Value, Pointer, Function, Class};
+use super::pointer::Ptr;
 
 #[derive(Error, Debug)]
 pub enum ExpressionError {
@@ -23,51 +25,51 @@ pub enum ExpressionError {
     IndexTypeError(Type, Type)
 }
 
-pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Result<V, ExpressionError> {
+pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V, ExpressionError> {
     match exp {
         Exp::Constant { value } => {
             Ok(V::Val(Value::from(value)))
         },
 
         Exp::Variable { scope } => {
-            Ok(V::Ptr(stack[*scope + stack_start]))
+            Ok(V::Ptr(module.variables[*scope + stack_start]))
         },
 
         Exp::Concatenation { first, second } => {
-            evaluate(first, stack, stack_start)?;
-            evaluate(second, stack, stack_start)
+            evaluate(first, module, stack_start)?;
+            evaluate(second, module, stack_start)
         },
 
         Exp::BinaryOp { op, arg1, arg2 } => {
-            let val1 = evaluate(arg1, stack, stack_start)?;
+            let val1 = evaluate(arg1, module, stack_start)?;
             match op {
                 BinaryOpcode::Mul => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     let result = val1.as_ref() * val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Div => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     let result = val1.as_ref() / val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Add => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     let result = val1.as_ref() + val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::Sub => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     let result = val1.as_ref() - val2.as_ref();
                     let value = result.map_err(|e| ExpressionError::OperationError(e))?;
                     Ok(V::Val(value))
                 },
                 BinaryOpcode::And => {
                     if val1.as_bool() {
-                        Ok(evaluate(arg2, stack, stack_start)?)
+                        Ok(evaluate(arg2, module, stack_start)?)
                     } else {
                         Ok(val1)
                     }
@@ -76,38 +78,38 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                     if val1.as_bool() {
                         Ok(val1)
                     } else {
-                        Ok(evaluate(arg2, stack, stack_start)?)
+                        Ok(evaluate(arg2, module, stack_start)?)
                     }
                 },
                 BinaryOpcode::Equals => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() == val2.as_ref())))
                 },
                 BinaryOpcode::NotEquals => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() != val2.as_ref())))
                 },
                 BinaryOpcode::Greater => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() > val2.as_ref())))
                 },
                 BinaryOpcode::GreaterEquals => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() >= val2.as_ref())))
                 },
                 BinaryOpcode::Lower => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() < val2.as_ref())))
                 },
                 BinaryOpcode::LowerEquals => {
-                    let val2 = evaluate(arg2, stack, stack_start)?;
+                    let val2 = evaluate(arg2, module, stack_start)?;
                     Ok(V::Val(Value::Bool(val1.as_ref() <= val2.as_ref())))
                 },
             }
         },
 
         Exp::UnaryOp { op, arg } => {
-            let val = evaluate(arg, stack, stack_start)?;
+            let val = evaluate(arg, module, stack_start)?;
             match op {
                 UnaryOpcode::Not => {
                     Ok(V::Val(!val.as_ref()))
@@ -116,22 +118,22 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
         },
 
         Exp::Let { scope: _ } => {
-            stack.push(Pointer::unit());
+            module.variables.push(Pointer::unit());
             Ok(V::Val(Value::Unit))
         },
 
         Exp::Assignment { left, right } => {
-            let right_v: V = evaluate(right, stack, stack_start)?;
+            let right_v: V = evaluate(right, module, stack_start)?;
             let ptr = match right_v {
                 V::Ptr(p) => p,
                 V::Val(value) => Pointer::from(Box::new(value)),
             };
             match left.as_ref() {
-                Exp::Variable { scope } => stack[scope + stack_start] = ptr,
+                Exp::Variable { scope } => module.variables[scope + stack_start] = ptr,
 
                 Exp::Subscript { element, index } => {
-                    let mut e = evaluate(element, stack, stack_start)?;
-                    let i = evaluate(index, stack, stack_start)?;
+                    let mut e = evaluate(element, module, stack_start)?;
+                    let i = evaluate(index, module, stack_start)?;
                     let value_ptr = subscript(e.as_mut_ref(), i.as_ref())?;
                     *value_ptr = ptr;
 
@@ -143,28 +145,28 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
         },
 
         Exp::Block { exp } => {
-            let scope = stack.len();
-            let result = evaluate(exp, stack, stack_start);
-            stack.truncate(scope);
+            let scope = module.variables.len();
+            let result = evaluate(exp, module, stack_start);
+            module.variables.truncate(scope);
             result
         },
 
         Exp::Condition { exp, then_block, else_block } => {
-            let condition = evaluate(exp, stack, stack_start)?;
-            let scope = stack.len();
+            let condition = evaluate(exp, module, stack_start)?;
+            let scope = module.variables.len();
             let result = if condition.as_bool() {
-                evaluate(then_block, stack, stack_start)
+                evaluate(then_block, module, stack_start)
             } else {
-                evaluate(else_block, stack, stack_start)
+                evaluate(else_block, module, stack_start)
             };
-            stack.truncate(scope);
+            module.variables.truncate(scope);
             result
         },
 
         Exp::While { guard, exp } => {
             loop {
-                if !evaluate(guard, stack, stack_start)?.as_bool() { break }
-                evaluate(exp, stack, stack_start)?;
+                if !evaluate(guard, module, stack_start)?.as_bool() { break }
+                evaluate(exp, module, stack_start)?;
             }
             Ok(V::Val(Value::Unit))
         }
@@ -172,7 +174,7 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
         Exp::List { elements } => {
             let mut list = Vec::with_capacity(elements.len());
             for element in elements {
-                let value = match evaluate(element, stack, stack_start)? {
+                let value = match evaluate(element, module, stack_start)? {
                     V::Ptr(p) => p,
                     V::Val(v) => Pointer::from(Box::new(v)),
                 };
@@ -182,59 +184,65 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
         }
 
         Exp::Subscript { element, index } => {
-            let mut e = evaluate(element, stack, stack_start)?;
-            let i = evaluate(index, stack, stack_start)?;
+            let mut e = evaluate(element, module, stack_start)?;
+            let i = evaluate(index, module, stack_start)?;
             let value_ptr = subscript(e.as_mut_ref(), i.as_ref())?;
             Ok(V::Ptr(*value_ptr))
         }
 
-        Exp::Function { num_args, external_vars, exp } => {
+        Exp::Function(function_exp) => {
+            let FunctionExp {
+                num_args, external_vars, body
+            } = function_exp.as_ref();
             let function = Function {
                 num_args: *num_args,
                 external_values: Vec::new(),
-                body: exp.clone(),
+                body: Box::new(body.clone()),
             };
             let function_ptr = Pointer::from(Box::new(Value::Function(function)));
             match function_ptr.clone().as_mut_ref() {
-                Value::Function(f) => {
+                Value::Function(fun) => {
                     // Push self reference as external value to enable recursion
-                    f.external_values.push(function_ptr);
+                    fun.external_values.push(function_ptr);
                     // Push external values to function stack
-                    f.external_values.append(&mut external_vars.iter().map(|var| {stack[*var + stack_start]}).collect())
+                    fun.external_values.append(&mut external_vars.iter().map(|var| {module.variables[*var + stack_start]}).collect())
                 },
                 _ => unreachable!()
             }
-            stack.push(function_ptr);
+            module.variables.push(function_ptr);
             Ok(V::Ptr(function_ptr))
         },
 
-        Exp::Closure { num_args, external_vars, exp } => {
-            let external_values = external_vars.iter().map(|var| {stack[*var + stack_start]}).collect();
+        Exp::Closure(function_exp) => {
+            let FunctionExp {
+                num_args, external_vars, body
+            } = function_exp.as_ref();
+            let external_values = external_vars.iter().map(|var| {module.variables[*var + stack_start]}).collect();
             let function = Function {
                 num_args: *num_args,
                 external_values: external_values,
-                body: exp.clone(),
+                body: Box::new(body.clone()),
             };
             Ok(V::Val(Value::Function(function)))
         },
 
         Exp::FunctionCall { fun, args } => {
-            let fun = evaluate(fun, stack, stack_start)?;
+            let fun = evaluate(fun, module, stack_start)?;
             match fun.as_ref() {
                 Value::Function(f) => {
                     if args.len() == f.num_args {
-                        let function_stack_start = stack.len();
+                        let function_stack_start = module.variables.len();
                         for external_value in &f.external_values {
-                            stack.push(*external_value);
+                            module.variables.push(*external_value);
                         }
                         for arg in args {
-                            match evaluate(arg, stack, stack_start)? {
-                                V::Ptr(ptr) => stack.push(ptr),
-                                V::Val(value) => stack.push(Pointer::from(Box::new(value)))
+                            match evaluate(arg, module, stack_start)? {
+                                V::Ptr(ptr) => module.variables.push(ptr),
+                                V::Val(value) => module.variables.push(Pointer::from(Box::new(value)))
                             };
                         };
-                        let result = evaluate(f.body.as_ref(), stack, function_stack_start)?;
-                        stack.truncate(function_stack_start);
+                        let result = evaluate(f.body.as_ref(), module, function_stack_start)?;
+                        module.variables.truncate(function_stack_start);
                         Ok(result)
                     } else {
                         Err(ExpressionError::WrongArgumentsNumber(f.num_args, args.len()))
@@ -243,6 +251,23 @@ pub fn evaluate(exp: &Exp, stack: &mut Vec<Pointer>, stack_start: usize) -> Resu
                 _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().get_type()))
             }
         },
+
+        Exp::Class(class_exp) => {
+            let class = Class {
+                name: class_exp.name.clone(),
+                fields: class_exp.fields.clone(),
+                methods: (&class_exp.methods).into_iter().map(|(k, v)| {
+                    let function = Function {
+                        num_args: v.num_args,
+                        external_values: Vec::new(),// Class methods never have external values
+                        body: Box::new(v.body.clone()),
+                    };
+                    (k.clone(), Ptr::from(function))
+                }).collect(),
+            };
+            module.classes.insert(class_exp.id, Ptr::from(class));
+            Ok(V::Val(Value::Unit))
+        }
     }
 }
 

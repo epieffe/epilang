@@ -1,4 +1,4 @@
-use crate::compiler::ast::AST;
+use crate::compiler::ast::{AST, ClassAST, FunctionAST};
 use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::intermediate::constant::Constant;
 
@@ -28,6 +28,19 @@ AST: AST = {
     Concatenation,
 }
 
+Class: ClassAST = {
+    "class" <name:Identifier> "{"
+      <fields:Sequence<Identifier>?>
+      <methods:Sequence<FunctionDecl>?>
+    "}" => {
+        ClassAST {
+            name: name,
+            fields: fields.unwrap_or(Vec::new()),
+            methods: methods.unwrap_or(Vec::new()),
+        }
+    }
+}
+
 Conditional: AST = {
     "if" <exp:Concatenation> "{" <thn:AST> "}" => {
         AST::Condition {
@@ -51,12 +64,13 @@ Loop: AST = {
     },
 }
 
-Function: AST = {
-    // Function declaration
-    "fn" <name:Identifier> "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
-        AST::Function { name: name, args: args.unwrap_or(Vec::new()), exp: Box::new(exp) }
+FunctionDecl: FunctionAST = {
+    "fn" <name:Identifier> "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
+        FunctionAST { name: name, args: args.unwrap_or(Vec::new()), body: body }
     },
-    // Anonymous function
+}
+
+AnonFunction: AST = {
     "fn" "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
         AST::Closure { args: args.unwrap_or(Vec::new()), exp: Box::new(exp) }
     },
@@ -72,9 +86,11 @@ Term: AST = {
     Identifier => AST::Identifier(<>),
     "{" <AST> "}" => AST::Block(Box::new(<>)),
     "(" <AST> ")",
+    Class => AST::Class(Box::new(<>)),
     Conditional,
     Loop,
-    Function
+    FunctionDecl => AST::Function(Box::new(<>)),
+    AnonFunction,
 }
 
 Concatenation: AST = {
@@ -196,6 +212,14 @@ StringLiteral: String = {
 BoolLiteral: bool = {
     "true" => true,
     "false" => false,
+}
+
+Sequence<T>: Vec<T> = {
+    <e:T> => vec![e],
+    <mut list:Comma<T>> <e:T> => {
+        list.push(e);
+        list
+    }
 }
 
 Comma<T>: Vec<T> = {
