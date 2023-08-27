@@ -35,6 +35,10 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             Ok(V::Ptr(module.variables[*scope + stack_start]))
         },
 
+        Exp::Class { id } => {
+            Ok(V::Val(Value::Class(*module.classes.get(id).expect("Class not found"))))
+        }
+
         Exp::Concatenation { first, second } => {
             evaluate(first, module, stack_start)?;
             evaluate(second, module, stack_start)
@@ -252,7 +256,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             }
         },
 
-        Exp::Class(class_exp) => {
+        Exp::ClassDef(class_exp) => {
             let class = Class {
                 name: class_exp.name.clone(),
                 fields: class_exp.fields.clone(),

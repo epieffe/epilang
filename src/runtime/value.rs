@@ -16,6 +16,7 @@ pub enum Value {
     String(String),
     List(Vec<Ptr<Value>>),
     Function(Function),
+    Class(Ptr<Class>),
 }
 
 impl Value {
@@ -28,6 +29,7 @@ impl Value {
             Value::String(s) => !s.is_empty(),
             Value::List(l) => !l.is_empty(),
             Value::Function(_) => true,
+            Value::Class(_) => true,
         }
     }
 
@@ -40,6 +42,7 @@ impl Value {
             Value::String(_) => Type::String,
             Value::List(_) => Type::List,
             Value::Function(_) => Type::Function,
+            Value::Class(_) => Type::Class,
         }
     }
 }
@@ -75,6 +78,7 @@ impl fmt::Display for Value {
                 write!(f, "]")
             },
             Value::Function(func) => write!(f, "[Function {:p}]", func),
+            Value::Class(class) => write!(f, "[Class {}]", class.as_ref().name)
         }
     }
 }

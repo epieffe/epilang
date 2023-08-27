@@ -5,7 +5,7 @@ use std::ptr;
 /// Wrapper around unsafe pointers. Allows to dereference outside unsafe blocks.
 #[derive(Debug)]
 pub struct Ptr<T> {
-    pub value: *mut T,
+    value: *mut T,
 }
 
 impl <T> Ptr<T> {
@@ -43,6 +43,12 @@ impl <T> From<T> for Ptr<T> {
 impl <T> From<Box<T>> for Ptr<T> {
     fn from(value: Box<T>) -> Self {
         Self { value: Box::into_raw(value) }
+    }
+}
+
+impl <T> PartialEq for Ptr<T> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.value, other.value)
     }
 }
 

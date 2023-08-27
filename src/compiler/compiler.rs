@@ -14,8 +14,15 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::Identifier(name) => {
-            let scope = frame.variable_scope(name)?;
-            Ok(Exp::Variable { scope })
+            match frame.variable_scope(name) {
+                // If identifier matches a variable name return variable expression
+                Some(scope) => Ok(Exp::Variable { scope }),
+                // Else if matches a class name return class expression
+                None => match ctx.class_id(name) {
+                    Some(id) => Ok(Exp::Class { id }),
+                    None => Err(CompilerError::UnknownIdentifier(name.clone())),
+                },
+            }
         },
 
         AST::Concatenation { left, right } => {
@@ -145,7 +152,7 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
                 fields: fields.clone(),
                 methods: methods_map,
             };
-            Ok(Exp::Class(Box::new(class_exp)))
+            Ok(Exp::ClassDef(Box::new(class_exp)))
         }
     }
 }

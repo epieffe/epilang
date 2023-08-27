@@ -9,6 +9,7 @@ pub enum Type {
     Bool,
     List,
     Function,
+    Class,
 }
 
 impl Display for Type {
@@ -21,6 +22,7 @@ impl Display for Type {
             Type::Bool => write!(f, "Bool"),
             Type::List => write!(f, "List"),
             Type::Function => write!(f, "Function"),
+            Type::Class => write!(f, "Class"),
         }
     }
 }

@@ -20,13 +20,13 @@ impl <'a> Frame<'a> {
         }
     }
 
-    pub fn variable_scope(&self, variable_name: &str) -> Result<usize, CompilerError> {
+    pub fn variable_scope(&self, variable_name: &str) -> Option<usize> {
         if let Some(value) = self.variables.get(variable_name) {
-            Ok(*value)
+            Some(*value)
         } else if let Some(parent) = self.parent.as_ref() {
             parent.variable_scope(variable_name)
         } else {
-            Err(CompilerError::UndefinedVariable(variable_name.to_owned()))
+            None
         }
     }
 
@@ -45,11 +45,12 @@ pub struct GlobalContext {
 }
 
 impl GlobalContext {
-    pub fn class_id(&self, class_name: &str) -> Result<usize, CompilerError> {
+    pub fn class_id(&self, class_name: &str) -> Option<usize> {
         if let Some(value) = self.classes.get(class_name) {
-            Ok(*value)
+            Some(*value)
         } else {
-            Err(CompilerError::UndefinedVariable(class_name.to_owned()))
+            None
+            //Err(CompilerError::UndefinedVariable(class_name.to_owned()))
         }
     }
 

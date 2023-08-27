@@ -21,7 +21,8 @@ pub enum Exp {
     Function(Box<FunctionExp>),
     Closure(Box<FunctionExp>),
     FunctionCall { fun: Box<Exp>, args: Vec<Exp> },
-    Class(Box<ClassExp>),
+    ClassDef(Box<ClassExp>),
+    Class{id: usize},
 }
 
 #[derive(Clone, Debug)]

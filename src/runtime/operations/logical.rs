@@ -19,6 +19,7 @@ impl PartialEq for Value {
             (Value::Float(f1), Value::Float(f2)) => f1 == f2,
             (Value::Bool(b1), Value::Bool(b2)) => b1 == b2,
             (Value::String(s1), Value::String(s2)) => s1 == s2,
+            (Value::Class(c1), Value::Class(c2)) => *c1 == *c2,
             (v1, v2) => std::ptr::eq(v1, v2),
         }
     }
