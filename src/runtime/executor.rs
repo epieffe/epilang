@@ -6,7 +6,7 @@ use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 
 use super::module::Module;
-use super::value::{V, Value, Pointer, Function, Class};
+use super::value::{V, Value, Function, Class};
 use super::pointer::Ptr;
 
 #[derive(Error, Debug)]
@@ -118,7 +118,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
         },
 
         Exp::Let { scope: _ } => {
-            module.variables.push(Pointer::unit());
+            module.variables.push(Ptr::null());
             Ok(V::Val(Value::Unit))
         },
 
@@ -126,7 +126,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             let right_v: V = evaluate(right, module, stack_start)?;
             let ptr = match right_v {
                 V::Ptr(p) => p,
-                V::Val(value) => Pointer::from(Box::new(value)),
+                V::Val(value) => Ptr::from(value),
             };
             match left.as_ref() {
                 Exp::Variable { scope } => module.variables[scope + stack_start] = ptr,
@@ -176,7 +176,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             for element in elements {
                 let value = match evaluate(element, module, stack_start)? {
                     V::Ptr(p) => p,
-                    V::Val(v) => Pointer::from(Box::new(v)),
+                    V::Val(v) => Ptr::from(v),
                 };
                 list.push(value)
             }
@@ -199,7 +199,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                 external_values: Vec::new(),
                 body: Box::new(body.clone()),
             };
-            let function_ptr = Pointer::from(Box::new(Value::Function(function)));
+            let function_ptr = Ptr::from(Value::Function(function));
             match function_ptr.clone().as_mut_ref() {
                 Value::Function(fun) => {
                     // Push self reference as external value to enable recursion
@@ -238,7 +238,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                         for arg in args {
                             match evaluate(arg, module, stack_start)? {
                                 V::Ptr(ptr) => module.variables.push(ptr),
-                                V::Val(value) => module.variables.push(Pointer::from(Box::new(value)))
+                                V::Val(value) => module.variables.push(Ptr::from(value))
                             };
                         };
                         let result = evaluate(f.body.as_ref(), module, function_stack_start)?;
@@ -271,7 +271,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
     }
 }
 
-fn subscript<'a, 'b>(element: &'a mut Value, index: &'b Value) -> Result<&'a mut Pointer, ExpressionError> {
+fn subscript<'a, 'b>(element: &'a mut Value, index: &'b Value) -> Result<&'a mut Ptr<Value>, ExpressionError> {
     match (element, index) {
         (Value::List(values), Value::Int(i)) => {
             values.get_mut(*i as usize).ok_or(ExpressionError::ListIndexOutofRange())

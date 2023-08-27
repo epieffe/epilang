@@ -3,17 +3,17 @@ use std::fmt::Display;
 use std::ptr;
 
 /// Wrapper around unsafe pointers. Allows to dereference outside unsafe blocks.
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct Ptr<T> {
     pub value: *mut T,
 }
 
 impl <T> Ptr<T> {
-    pub fn unit() -> Ptr<T> {
+    pub fn null() -> Ptr<T> {
         Ptr{value: ptr::null_mut()}
     }
 
-    pub fn is_unit(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         self.value.is_null()
     }
 
@@ -23,6 +23,14 @@ impl <T> Ptr<T> {
 
     pub fn as_mut_ref(&mut self) -> &mut T {
         unsafe{ &mut *self.value }
+    }
+}
+
+impl<T> Copy for Ptr<T> {}
+
+impl<T> Clone for Ptr<T> {
+    fn clone(&self) -> Self {
+        Self { value: self.value }
     }
 }
 

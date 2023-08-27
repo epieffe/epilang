@@ -1,5 +1,4 @@
 use std::fmt;
-use std::ptr;
 use std::collections::HashMap;
 
 use crate::intermediate::constant::Constant;
@@ -15,7 +14,7 @@ pub enum Value {
     Float(f32),
     Bool(bool),
     String(String),
-    List(Vec<Pointer>),
+    List(Vec<Ptr<Value>>),
     Function(Function),
 }
 
@@ -90,55 +89,20 @@ pub struct Class {
 #[derive(Clone, Debug)]
 pub struct Function {
     pub num_args: usize,
-    pub external_values: Vec<Pointer>,
+    pub external_values: Vec<Ptr<Value>>,
     pub body: Box<Exp>
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Pointer {
-    pub value: *mut Value,
-}
-
-impl Pointer {
-    pub fn unit() -> Pointer {
-        Pointer{value: ptr::null_mut()}
-    }
-
-    pub fn is_unit(&self) -> bool {
-        self.value.is_null()
-    }
-
-    pub fn as_ref(&self) -> &Value {
-        unsafe{ &*self.value }
-    }
-
-    pub fn as_mut_ref(&mut self) -> &mut Value {
-        unsafe{ &mut *self.value }
-    }
-}
-
-impl From<Box<Value>> for Pointer {
-    fn from(value: Box<Value>) -> Self {
-        Pointer { value: Box::into_raw(value) }
-    }
-}
-
-impl fmt::Display for Pointer {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_ref())
-    }
 }
 
 #[derive(Debug)]
 pub enum V {
-    Ptr(Pointer),
+    Ptr(Ptr<Value>),
     Val(Value),
 }
 
 impl V {
     pub fn as_bool(&self) -> bool {
         match self {
-            V::Ptr(ptr) => if ptr.is_unit() {false} else {ptr.as_ref().as_bool()},
+            V::Ptr(ptr) => if ptr.is_null() {false} else {ptr.as_ref().as_bool()},
             V::Val(value) => value.as_bool()
         }
     }
@@ -161,7 +125,7 @@ impl V {
 impl fmt::Display for V {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            V::Ptr(ptr) => if ptr.is_unit() {write!(f, "unit")}  else {write!(f, "{}", ptr.as_ref())},
+            V::Ptr(ptr) => if ptr.is_null() {write!(f, "unit")}  else {write!(f, "{}", ptr.as_ref())},
             V::Val(value) => write!(f, "{}", value)
         }
     }
