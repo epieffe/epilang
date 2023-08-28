@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use thiserror::Error;
 
 use crate::intermediate::constant::Type;
@@ -6,7 +8,7 @@ use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 
 use super::module::Module;
-use super::value::{V, Value, Function, Class};
+use super::value::{V, Value, Function, Class, Object};
 use super::pointer::Ptr;
 
 #[derive(Error, Debug)]
@@ -233,6 +235,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
         Exp::FunctionCall { fun, args } => {
             let fun = evaluate(fun, module, stack_start)?;
             match fun.as_ref() {
+                // Function call
                 Value::Function(f) => {
                     if args.len() == f.num_args {
                         let function_stack_start = module.variables.len();
@@ -251,6 +254,14 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                     } else {
                         Err(ExpressionError::WrongArgumentsNumber(f.num_args, args.len()))
                     }
+                },
+                // Class constructor
+                Value::Class(class) => {
+                    let mut fields = HashMap::with_capacity(class.as_ref().fields.len());
+                    for field_name in &class.as_ref().fields {
+                        fields.insert(field_name.clone(), Ptr::null());
+                    }
+                    Ok(V::Val(Value::Object(Object { class: *class, fields})))
                 },
                 _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().get_type()))
             }

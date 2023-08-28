@@ -46,6 +46,12 @@ impl <T> From<Box<T>> for Ptr<T> {
     }
 }
 
+impl <T> From<&T> for Ptr<T> {
+    fn from(value: &T) -> Self {
+        Self { value: (value as *const T) as *mut T }
+    }
+}
+
 impl <T> PartialEq for Ptr<T> {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self.value, other.value)

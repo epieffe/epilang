@@ -7,7 +7,7 @@ use crate::intermediate::exp::Exp;
 
 use super::pointer::Ptr;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Value {
     Unit,
     Int(i32),
@@ -17,6 +17,8 @@ pub enum Value {
     List(Vec<Ptr<Value>>),
     Function(Function),
     Class(Ptr<Class>),
+    Object(Object),
+    Method(Method),
 }
 
 impl Value {
@@ -28,8 +30,21 @@ impl Value {
             Value::Float(f) => *f != 0.0,
             Value::String(s) => !s.is_empty(),
             Value::List(l) => !l.is_empty(),
-            Value::Function(_) => true,
-            Value::Class(_) => true,
+            _ => true,
+        }
+    }
+
+    pub fn get_method(&self, name: &str) -> Option<Method> {
+        match self {
+            Value::Object(o) => {
+                o.get_method(name).map(|f| {
+                    Method {
+                        self_value: Ptr::from(self),
+                        function: f,
+                    }
+                })
+            },
+            _ => None
         }
     }
 
@@ -43,6 +58,8 @@ impl Value {
             Value::List(_) => Type::List,
             Value::Function(_) => Type::Function,
             Value::Class(_) => Type::Class,
+            Value::Object(_) => Type::Object,
+            Value::Method(_) => Type::Method,
         }
     }
 }
@@ -78,19 +95,43 @@ impl fmt::Display for Value {
                 write!(f, "]")
             },
             Value::Function(func) => write!(f, "[Function {:p}]", func),
-            Value::Class(class) => write!(f, "[Class {}]", class.as_ref().name)
+            Value::Class(class) => write!(f, "[Class {}]", class.as_ref().name),
+            Value::Object(o) => write!(f, "[Object {:p}]", o),
+            Value::Method(m) => write!(f, "[Method {:p}]", m),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Class {
     pub name: String,
     pub fields: Vec<String>,
     pub methods: HashMap<String, Ptr<Function>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
+pub struct Object {
+    pub class: Ptr<Class>,
+    pub fields: HashMap<String, Ptr<Value>>,
+}
+
+impl Object {
+    pub fn get_field(&self, name: &str) -> Option<Ptr<Value>> {
+        self.fields.get(name).copied()
+    }
+
+    pub fn get_method(&self, name: &str) -> Option<Ptr<Function>> {
+        self.class.as_ref().methods.get(name).copied()
+    }
+}
+
+#[derive(Debug)]
+pub struct Method {
+    pub self_value: Ptr<Value>,
+    pub function: Ptr<Function>
+}
+
+#[derive(Debug)]
 pub struct Function {
     pub num_args: usize,
     pub external_values: Vec<Ptr<Value>>,

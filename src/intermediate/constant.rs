@@ -10,6 +10,8 @@ pub enum Type {
     List,
     Function,
     Class,
+    Object,
+    Method,
 }
 
 impl Display for Type {
@@ -23,6 +25,8 @@ impl Display for Type {
             Type::List => write!(f, "List"),
             Type::Function => write!(f, "Function"),
             Type::Class => write!(f, "Class"),
+            Type::Object => write!(f, "Object"),
+            Type::Method => write!(f, "Method"),
         }
     }
 }
