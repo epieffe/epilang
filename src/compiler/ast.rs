@@ -18,7 +18,8 @@ pub enum AST {
     Function(Box<FunctionAST>),
     Closure { args: Vec<String>, exp: Box<AST> },
     FunctionCall { fun: Box<AST>, args: Vec<AST> },
-    Class(Box<ClassAST>)
+    Class(Box<ClassAST>),
+    PropertyAccess { exp: Box<AST>, property: String },
 }
 
 pub struct FunctionAST {

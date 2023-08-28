@@ -16,7 +16,7 @@ pub enum ExpressionError {
     #[error("OperationError: {0}")]
     OperationError(OperationError),
     #[error("RuntimeError: list index out of range")]
-    ListIndexOutofRange(),
+    ListIndexOutofRange,
     #[error("TypeError: {0} is not callable")]
     ValueNotCallable(Type),
     #[error("TypeError: function requires {0} positional argument(s) but {1} was given")]
@@ -24,7 +24,11 @@ pub enum ExpressionError {
     #[error("TypeError: {0} is not subscriptable")]
     NotSubscriptable(Type),
     #[error("TypeError: {0} indices must be integers, not {1}")]
-    IndexTypeError(Type, Type)
+    IndexTypeError(Type, Type),
+    #[error("TypeError: no such field or method {0}")]
+    NoSuchFieldOrMethod(String),
+    #[error("TypeError: no such field {0}")]
+    NoSuchField(String),
 }
 
 pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V, ExpressionError> {
@@ -142,7 +146,19 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                     let i = evaluate(index, module, stack_start)?;
                     let value_ptr = subscript(e.as_mut_ref(), i.as_ref())?;
                     *value_ptr = ptr;
+                },
 
+                Exp::PropertyAccess { exp, property } => {
+                    let mut v = evaluate(exp, module, stack_start)?;
+                    match v.as_mut_ref() {
+                        Value::Object(obj) => {
+                            match obj.get_mut_field(property) {
+                                Some(field) => *field = ptr,
+                                None => return Err(ExpressionError::NoSuchField(property.clone())),
+                            }
+                        },
+                        _ => return Err(ExpressionError::NoSuchField(property.clone())),
+                    }
                 }
                 // Invalid left-expression in assignments are detected at compile time
                 _ => unreachable!(),
@@ -236,24 +252,23 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             let fun = evaluate(fun, module, stack_start)?;
             match fun.as_ref() {
                 // Function call
-                Value::Function(f) => {
-                    if args.len() == f.num_args {
-                        let function_stack_start = module.variables.len();
-                        for external_value in &f.external_values {
-                            module.variables.push(*external_value);
-                        }
-                        for arg in args {
-                            match evaluate(arg, module, stack_start)? {
-                                V::Ptr(ptr) => module.variables.push(ptr),
-                                V::Val(value) => module.variables.push(Ptr::from(value))
-                            };
-                        };
-                        let result = evaluate(f.body.as_ref(), module, function_stack_start)?;
-                        module.variables.truncate(function_stack_start);
-                        Ok(result)
-                    } else {
-                        Err(ExpressionError::WrongArgumentsNumber(f.num_args, args.len()))
+                Value::Function(fun) => {
+                    let mut args_v = Vec::with_capacity(args.len());
+                    for arg in args {
+                        let v = evaluate(&arg, module, stack_start)?;
+                        args_v.push(v.into_ptr())
                     }
+                    call_function(fun, args_v, module)
+                },
+                // Method call
+                Value::Method(method) => {
+                    let mut args_v = Vec::with_capacity(args.len() + 1);
+                    args_v.push(method.self_value);
+                    for arg in args {
+                        let v = evaluate(&arg, module, stack_start)?;
+                        args_v.push(v.into_ptr())
+                    }
+                    call_function(method.function.as_ref(), args_v, module)
                 },
                 // Class constructor
                 Value::Class(class) => {
@@ -282,16 +297,44 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             };
             module.classes.insert(class_exp.id, Ptr::from(class));
             Ok(V::Val(Value::Unit))
-        }
+        },
+
+        Exp::PropertyAccess { exp, property } => {
+            let v = evaluate(exp, module, stack_start)?;
+            match v.as_ref().get_field(property) {
+                // Check if a field with property name exists
+                Some(ptr) => Ok(V::Ptr(ptr)),
+                // Then check if a method with property name exists
+                None => match v.as_ref().get_method(property) {
+                    Some(m) => Ok(V::Val(Value::Method(m))),
+                    None => Err(ExpressionError::NoSuchFieldOrMethod(property.clone()))
+                },
+            }
+        },
     }
 }
 
 fn subscript<'a, 'b>(element: &'a mut Value, index: &'b Value) -> Result<&'a mut Ptr<Value>, ExpressionError> {
     match (element, index) {
         (Value::List(values), Value::Int(i)) => {
-            values.get_mut(*i as usize).ok_or(ExpressionError::ListIndexOutofRange())
+            values.get_mut(*i as usize).ok_or(ExpressionError::ListIndexOutofRange)
         },
         (v, Value::Int(_)) => Err(ExpressionError::NotSubscriptable(v.get_type())),
         (v, i) => Err(ExpressionError::IndexTypeError(v.get_type(), i.get_type()))
+    }
+}
+
+fn call_function(fun: &Function, args: Vec<Ptr<Value>>, module: &mut Module) -> Result<V, ExpressionError> {
+    if fun.num_args == args.len() {
+        let function_stack_start = module.variables.len();
+        // Push external values to variable stack
+        module.variables.extend_from_slice(&fun.external_values);
+        // Push function args to variable stack
+        module.variables.extend(args);
+        let result = evaluate(fun.body.as_ref(), module, function_stack_start);
+        module.variables.truncate(function_stack_start);
+        Ok(result?)
+    } else {
+        Err(ExpressionError::WrongArgumentsNumber(fun.num_args, args.len()))
     }
 }

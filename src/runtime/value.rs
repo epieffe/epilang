@@ -34,6 +34,13 @@ impl Value {
         }
     }
 
+    pub fn get_field(&self, name: &str) -> Option<Ptr<Value>> {
+        match self {
+            Value::Object(o) => o.get_field(name),
+            _ => None,
+        }
+    }
+
     pub fn get_method(&self, name: &str) -> Option<Method> {
         match self {
             Value::Object(o) => {
@@ -120,6 +127,10 @@ impl Object {
         self.fields.get(name).copied()
     }
 
+    pub fn get_mut_field(&mut self, name: &str) -> Option<&mut Ptr<Value>> {
+        self.fields.get_mut(name)
+    }
+
     pub fn get_method(&self, name: &str) -> Option<Ptr<Function>> {
         self.class.as_ref().methods.get(name).copied()
     }
@@ -163,6 +174,13 @@ impl V {
         match self {
             V::Ptr(ptr) => ptr.as_mut_ref(),
             V::Val(value) => value
+        }
+    }
+
+    pub fn into_ptr(self) -> Ptr<Value> {
+        match self {
+            V::Ptr(ptr) => ptr,
+            V::Val(value) => Ptr::from(value)
         }
     }
 }

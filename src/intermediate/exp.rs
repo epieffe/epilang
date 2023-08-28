@@ -23,6 +23,7 @@ pub enum Exp {
     FunctionCall { fun: Box<Exp>, args: Vec<Exp> },
     ClassDef(Box<ClassExp>),
     Class{id: usize},
+    PropertyAccess { exp: Box<Exp>, property: String },
 }
 
 #[derive(Clone, Debug)]

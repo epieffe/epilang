@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::intermediate::exp::{Exp, FunctionExp, ClassExp};
 
-use super::ast::{AST, ClassAST};
+use super::ast::AST;
 use super::error::CompilerError;
 use super::frame::{GlobalContext, Frame};
 
@@ -60,7 +60,9 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
                         })
                     })
                 },
-                Exp::Variable { scope: _ } | Exp::Subscript { element: _, index: _ } => {
+                Exp::Variable { scope: _ } |
+                Exp::Subscript { element: _, index: _ } |
+                Exp::PropertyAccess { exp: _, property: _ } => {
                     Ok(Exp::Assignment {
                         left: Box::new(left_exp),
                         right: Box::new(right_exp)
@@ -134,26 +136,28 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::Class(class_ast) => {
-            let ClassAST {
-                name, fields, methods
-            } = class_ast.as_ref();
-            let mut methods_map = HashMap::with_capacity(methods.len());
-            for m in methods {
+            let mut methods_map = HashMap::with_capacity(class_ast.as_ref().methods.len());
+            for m in &class_ast.as_ref().methods {
                 let mut args = Vec::with_capacity(m.args.len());
                 args.push("self".to_owned());
-                m.args.clone_into(&mut args);
+                args.extend_from_slice(&m.args);
                 let function_exp = compile_function(None, &args, &m.body, frame, ctx)?;
                 methods_map.insert(m.name.clone(), function_exp);
             }
-            let id = ctx.define_class(name.clone())?;
+            let id = ctx.define_class(class_ast.as_ref().name.clone())?;
             let class_exp = ClassExp {
                 id,
-                name: name.clone(),
-                fields: fields.clone(),
+                name: class_ast.as_ref().name.clone(),
+                fields: class_ast.as_ref().fields.clone(),
                 methods: methods_map,
             };
             Ok(Exp::ClassDef(Box::new(class_exp)))
-        }
+        },
+
+        AST::PropertyAccess { exp, property } => {
+            let exp = compile(exp, frame, ctx)?;
+            Ok(Exp::PropertyAccess { exp: Box::new(exp), property: property.clone() })
+        },
     }
 }
 

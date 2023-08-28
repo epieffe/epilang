@@ -190,6 +190,13 @@ CallOrSubscript: AST = {
     <list:CallOrSubscript> "[" <index:AST> "]" => {
         AST::Subscript { element: Box::new(list), index: Box::new(index)}
     },
+    PropertyAccess,
+}
+
+PropertyAccess: AST = {
+    <exp: PropertyAccess> "." <name:Identifier> => {
+        AST::PropertyAccess { exp: Box::new(exp), property: name }
+    },
     Term,
 }
 
