@@ -26,7 +26,13 @@ pub enum Exp {
     PropertyAccess { exp: Box<Exp>, property: String },
 }
 
-#[derive(Clone, Debug)]
+impl Default for Exp {
+    fn default() -> Self {
+        Exp::Constant { value: Constant::Unit }
+    }
+}
+
+#[derive(Default, Clone, Debug)]
 pub struct FunctionExp {
     pub num_args: usize,
     pub external_vars: Vec<usize>,
@@ -38,5 +44,6 @@ pub struct ClassExp {
     pub id: usize,
     pub name: String,
     pub fields: Vec<String>,
+    pub constructor: FunctionExp,
     pub methods: HashMap<String, FunctionExp>,
 }

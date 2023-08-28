@@ -31,5 +31,6 @@ pub struct FunctionAST {
 pub struct ClassAST {
     pub name: String,
     pub fields: Vec<String>,
+    pub constructor: Option<FunctionAST>,
     pub methods: Vec<FunctionAST>,
 }

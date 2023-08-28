@@ -113,6 +113,7 @@ impl fmt::Display for Value {
 pub struct Class {
     pub name: String,
     pub fields: Vec<String>,
+    pub constructor: Function,
     pub methods: HashMap<String, Ptr<Function>>,
 }
 

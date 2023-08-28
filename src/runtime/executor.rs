@@ -262,30 +262,34 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                 },
                 // Method call
                 Value::Method(method) => {
-                    let mut args_v = Vec::with_capacity(args.len() + 1);
-                    args_v.push(method.self_value);
-                    for arg in args {
-                        let v = evaluate(&arg, module, stack_start)?;
-                        args_v.push(v.into_ptr())
-                    }
-                    call_function(method.function.as_ref(), args_v, module)
+                    call_method(method.function.as_ref(), method.self_value, args, module, stack_start)
                 },
-                // Class constructor
+                // Class constructor call
                 Value::Class(class) => {
+                    // Create object
                     let mut fields = HashMap::with_capacity(class.as_ref().fields.len());
                     for field_name in &class.as_ref().fields {
                         fields.insert(field_name.clone(), Ptr::null());
                     }
-                    Ok(V::Val(Value::Object(Object { class: *class, fields})))
+                    let object = Value::Object(Object { class: *class, fields});
+                    // Call constructor
+                    call_method(&class.as_ref().constructor, Ptr::from(&object), args, module, stack_start)?;
+                    Ok(V::Val(object))
                 },
                 _ => Err(ExpressionError::ValueNotCallable(fun.as_ref().get_type()))
             }
         },
 
         Exp::ClassDef(class_exp) => {
+            // Create class
             let class = Class {
                 name: class_exp.name.clone(),
                 fields: class_exp.fields.clone(),
+                constructor: Function {
+                    num_args: class_exp.constructor.num_args,
+                    external_values: Vec::new(),
+                    body: Box::new(class_exp.constructor.body.clone())
+                },
                 methods: (&class_exp.methods).into_iter().map(|(k, v)| {
                     let function = Function {
                         num_args: v.num_args,
@@ -295,6 +299,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                     (k.clone(), Ptr::from(function))
                 }).collect(),
             };
+            // Load class in module
             module.classes.insert(class_exp.id, Ptr::from(class));
             Ok(V::Val(Value::Unit))
         },
@@ -337,4 +342,15 @@ fn call_function(fun: &Function, args: Vec<Ptr<Value>>, module: &mut Module) -> 
     } else {
         Err(ExpressionError::WrongArgumentsNumber(fun.num_args, args.len()))
     }
+}
+
+fn call_method(fun: &Function, self_ptr: Ptr<Value>, args: &Vec<Exp>,  module: &mut Module, stack_start: usize) -> Result<V, ExpressionError> {
+    let mut args_v = Vec::with_capacity(args.len() + 1);
+    // Push self reference as first method argument
+    args_v.push(self_ptr);
+    for arg in args {
+        let v = evaluate(&arg, module, stack_start)?;
+        args_v.push(v.into_ptr())
+    }
+    call_function(fun, args_v, module)
 }

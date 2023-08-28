@@ -30,13 +30,15 @@ AST: AST = {
 
 Class: ClassAST = {
     "class" <name:Identifier> "{"
-      <fields:Sequence<Identifier>?>
-      <methods:Sequence<FunctionDecl>?>
+        <fields:Sequence<Identifier>?>
+        <constructor:Constructor?>
+        <methods:Sequence<FunctionDecl>?>
     "}" => {
         ClassAST {
             name: name,
-            fields: fields.unwrap_or(Vec::new()),
-            methods: methods.unwrap_or(Vec::new()),
+            fields: fields.unwrap_or_default(),
+            constructor: constructor,
+            methods: methods.unwrap_or_default(),
         }
     }
 }
@@ -64,21 +66,27 @@ Loop: AST = {
     },
 }
 
+Constructor: FunctionAST = {
+    "constructor" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
+        FunctionAST { name: String::new(), args: args.unwrap_or_default(), body: body }
+    }
+}
+
 FunctionDecl: FunctionAST = {
     "fn" <name:Identifier> "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
-        FunctionAST { name: name, args: args.unwrap_or(Vec::new()), body: body }
+        FunctionAST { name: name, args: args.unwrap_or_default(), body: body }
     },
 }
 
 AnonFunction: AST = {
     "fn" "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
-        AST::Closure { args: args.unwrap_or(Vec::new()), exp: Box::new(exp) }
+        AST::Closure { args: args.unwrap_or_default(), exp: Box::new(exp) }
     },
 }
 
 Term: AST = {
     "let" <Identifier> => AST::Definition(<>),
-    "[" <elems:Comma<AST>?> "]" => AST::List { elements: elems.unwrap_or(Vec::new()) },
+    "[" <elems:Comma<AST>?> "]" => AST::List { elements: elems.unwrap_or_default() },
     IntNum => AST::Constant(Constant::Int(<>)),
     FloatNum => AST::Constant(Constant::Float(<>)),
     StringLiteral => AST::Constant(Constant::String(<>)),
@@ -180,11 +188,8 @@ UnaryOp: UnaryOpcode = {
 
 CallOrSubscript: AST = {
     // Function call
-    <fun:CallOrSubscript> "(" ")" => {
-        AST::FunctionCall { fun: Box::new(fun), args: Vec::new()}
-    },
-    <fun:CallOrSubscript> "(" <args:Comma<AST>> ")" => {
-        AST::FunctionCall { fun: Box::new(fun), args: args}
+    <fun:CallOrSubscript> "(" <args:Comma<AST>?> ")" => {
+        AST::FunctionCall { fun: Box::new(fun), args: args.unwrap_or_default()}
     },
     // List subscript
     <list:CallOrSubscript> "[" <index:AST> "]" => {
@@ -235,4 +240,4 @@ Comma<T>: Vec<T> = {
         list.push(e);
         list
     }
-};
+}
