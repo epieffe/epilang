@@ -154,7 +154,7 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
                 id: ctx.define_class(class_ast.as_ref().name.clone())?,
                 name: class_ast.as_ref().name.clone(),
                 fields: class_ast.as_ref().fields.clone(),
-                constructor: constructor.unwrap_or_default(),
+                constructor: constructor.unwrap_or(FunctionExp::default_constructor()),
                 methods,
             };
             Ok(Exp::ClassDef(Box::new(class_exp)))

@@ -128,7 +128,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
         },
 
         Exp::Let { scope: _ } => {
-            module.variables.push(Ptr::null());
+            module.variables.push(Ptr::unit());
             Ok(V::Val(Value::Unit))
         },
 
@@ -269,7 +269,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                     // Create object
                     let mut fields = HashMap::with_capacity(class.as_ref().fields.len());
                     for field_name in &class.as_ref().fields {
-                        fields.insert(field_name.clone(), Ptr::null());
+                        fields.insert(field_name.clone(), Ptr::unit());
                     }
                     let object = Value::Object(Object { class: *class, fields});
                     // Call constructor

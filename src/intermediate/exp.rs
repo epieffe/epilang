@@ -32,11 +32,21 @@ impl Default for Exp {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct FunctionExp {
     pub num_args: usize,
     pub external_vars: Vec<usize>,
     pub body: Exp,
+}
+
+impl FunctionExp {
+    pub fn default_constructor() -> FunctionExp {
+        FunctionExp {
+            num_args: 1,
+            external_vars: Vec::default(),
+            body: Exp::default(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

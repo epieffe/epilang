@@ -67,7 +67,7 @@ Loop: AST = {
 }
 
 Constructor: FunctionAST = {
-    "constructor" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
+    "init" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
         FunctionAST { name: String::new(), args: args.unwrap_or_default(), body: body }
     }
 }

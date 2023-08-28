@@ -159,7 +159,7 @@ pub enum V {
 impl V {
     pub fn as_bool(&self) -> bool {
         match self {
-            V::Ptr(ptr) => if ptr.is_null() {false} else {ptr.as_ref().as_bool()},
+            V::Ptr(ptr) => ptr.as_ref().as_bool(),
             V::Val(value) => value.as_bool()
         }
     }
@@ -189,7 +189,7 @@ impl V {
 impl fmt::Display for V {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            V::Ptr(ptr) => if ptr.is_null() {write!(f, "unit")}  else {write!(f, "{}", ptr.as_ref())},
+            V::Ptr(ptr) => write!(f, "{}", ptr.as_ref()),
             V::Val(value) => write!(f, "{}", value)
         }
     }
