@@ -101,10 +101,10 @@ impl fmt::Display for Value {
                 }
                 write!(f, "]")
             },
-            Value::Function(func) => write!(f, "[Function {:p}]", func),
-            Value::Class(class) => write!(f, "[Class {}]", class.as_ref().name),
-            Value::Object(o) => write!(f, "[Object {:p}]", o),
-            Value::Method(m) => write!(f, "[Method {:p}]", m),
+            Value::Function(func) => write!(f, "[Function at {:p}]", func),
+            Value::Class(class) => write!(f, "[Class {} at {:p}]", class.as_ref().name, class.as_ref()),
+            Value::Object(o) => write!(f, "[{} object at {:p}]", o.class.as_ref().name, o),
+            Value::Method(m) => write!(f, "[Method at {:p}]", m),
         }
     }
 }

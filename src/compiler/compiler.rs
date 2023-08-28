@@ -4,9 +4,9 @@ use crate::intermediate::exp::{Exp, FunctionExp, ClassExp};
 
 use super::ast::AST;
 use super::error::CompilerError;
-use super::frame::{GlobalContext, Frame};
+use super::context::CompilerContext;
 
-pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<Exp, CompilerError> {
+pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerError> {
 
     match ast {
         AST::Constant(value) => {
@@ -14,7 +14,7 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::Identifier(name) => {
-            match frame.variable_scope(name) {
+            match ctx.variable_scope(name) {
                 // If identifier matches a variable name return variable expression
                 Some(scope) => Ok(Exp::Variable { scope }),
                 // Else if matches a class name return class expression
@@ -26,30 +26,30 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::Concatenation { left, right } => {
-            let exp1 = compile(left, frame, ctx)?;
-            let exp2 = compile(right, frame, ctx)?;
+            let exp1 = compile(left, ctx)?;
+            let exp2 = compile(right, ctx)?;
             Ok(Exp::Concatenation { first: Box::new(exp1), second: Box::new(exp2) })
         },
 
         AST::BinaryOp(arg1, op, arg2) => {
-            let exp1 = compile(arg1, frame, ctx)?;
-            let exp2 = compile(arg2, frame, ctx)?;
+            let exp1 = compile(arg1, ctx)?;
+            let exp2 = compile(arg2, ctx)?;
             Ok(Exp::BinaryOp { op: *op, arg1: Box::new(exp1), arg2: Box::new(exp2) })
         },
 
         AST::UnaryOp(op, arg) => {
-            let exp = compile(arg, frame, ctx)?;
+            let exp = compile(arg, ctx)?;
             Ok(Exp::UnaryOp { op: *op, arg: Box::new(exp) })
         },
 
         AST::Definition(name) => {
-            let scope = frame.define_variable(name.clone());
+            let scope = ctx.define_variable(name.clone());
             Ok(Exp::Let { scope })
         },
 
         AST::Assignment(left, right) => {
-            let left_exp = compile(left, frame, ctx)?;
-            let right_exp = compile(right, frame, ctx)?;
+            let left_exp = compile(left, ctx)?;
+            let right_exp = compile(right, ctx)?;
             match left_exp {
                 Exp::Let { scope } => {
                     Ok(Exp::Concatenation {
@@ -73,19 +73,16 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::Block(exp) => {
-            let mut sub_frame = Frame::new(frame);
-            let exp = compile(exp, &mut sub_frame, ctx)?;
+            let exp = compile_block(exp, ctx, false)?;
             Ok(Exp::Block { exp: Box::new(exp) })
         },
 
         AST::Condition { exp, then_block, else_block } => {
-            let exp = compile(exp, frame, ctx)?;
+            let exp = compile(exp, ctx)?;
             // then block
-            let mut then_frame = Frame::new(frame);
-            let then_block = compile(then_block, &mut then_frame, ctx)?;
+            let then_block = compile_block(then_block, ctx, false)?;
             // else block
-            let mut else_frame = Frame::new(frame);
-            let else_block = compile(else_block, &mut else_frame, ctx)?;
+            let else_block = compile_block(else_block, ctx, false)?;
             Ok(Exp::Condition {
                 exp: Box::new(exp),
                 then_block: Box::new(then_block),
@@ -94,42 +91,42 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::While {guard, exp } => {
-            let guard = compile(guard, frame, ctx)?;
-            let exp = compile(exp, frame, ctx)?;
+            let guard = compile(guard, ctx)?;
+            let exp = compile(exp, ctx)?;
             Ok(Exp::While { guard: Box::new(guard), exp: Box::new(exp) })
         },
 
         AST::List { elements } => {
             let mut list = Vec::with_capacity(elements.len());
             for element in elements {
-                list.push(compile(element, frame, ctx)?)
+                list.push(compile(element, ctx)?)
             }
             Ok(Exp::List { elements: list })
         },
 
         AST::Subscript { element, index } => {
-            let e = compile(element, frame, ctx)?;
-            let i = compile(index, frame, ctx)?;
+            let e = compile(element, ctx)?;
+            let i = compile(index, ctx)?;
             Ok(Exp::Subscript { element: Box::new(e), index: Box::new(i) })
         }
 
         AST::Function(f) => {
-            let fn_exp = compile_function(Some(&f.name), &f.args, &f.body, frame, ctx)?;
+            let fn_exp = compile_function(Some(&f.name), &f.args, &f.body, ctx)?;
             // Function is assigned to a new variable in current scope
-            frame.define_variable(f.name.clone());
+            ctx.define_variable(f.name.clone());
             Ok(Exp::Function(Box::new(fn_exp)))
         },
 
         AST::Closure { args, exp } => {
-            let fn_exp = compile_function(None, args, exp, frame, ctx)?;
+            let fn_exp = compile_function(None, args, exp, ctx)?;
             Ok(Exp::Closure(Box::new(fn_exp)))
         },
 
         AST::FunctionCall { fun, args } => {
-            let fun_exp = compile(fun, frame, ctx)?;
+            let fun_exp = compile(fun, ctx)?;
             let mut args_exps = Vec::new();
             for arg in args {
-                let arg_exp = compile(arg, frame, ctx)?;
+                let arg_exp = compile(arg, ctx)?;
                 args_exps.push(arg_exp);
             };
             Ok(Exp::FunctionCall { fun: Box::new(fun_exp), args: args_exps })
@@ -141,7 +138,7 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
                 let mut args = Vec::with_capacity(m.args.len());
                 args.push("self".to_owned());
                 args.extend_from_slice(&m.args);
-                let function_exp = compile_function(None, &args, &m.body, frame, ctx)?;
+                let function_exp = compile_function(None, &args, &m.body, ctx)?;
                 methods_map.insert(m.name.clone(), function_exp);
             }
             let id = ctx.define_class(class_ast.as_ref().name.clone())?;
@@ -155,25 +152,35 @@ pub fn compile(ast: &AST, frame: &mut Frame, ctx: &mut GlobalContext) -> Result<
         },
 
         AST::PropertyAccess { exp, property } => {
-            let exp = compile(exp, frame, ctx)?;
+            let exp = compile(exp, ctx)?;
             Ok(Exp::PropertyAccess { exp: Box::new(exp), property: property.clone() })
         },
     }
 }
 
-fn compile_function(name: Option<&str>, args: &Vec<String>, body: &AST, _frame: &mut Frame, ctx: &mut GlobalContext) -> Result<FunctionExp, CompilerError> {
-    let mut function_frame: Frame = Default::default();
+fn compile_function(name: Option<&str>, args: &Vec<String>, body: &AST, ctx: &mut CompilerContext) -> Result<FunctionExp, CompilerError> {
+    ctx.push_frame(true);
     if name.is_some() {
         // Function is assigned to a variable in its own scope to enable recursion
-        function_frame.define_variable(name.unwrap().to_owned());
+        ctx.define_variable(name.unwrap().to_owned());
     }
     for arg in args {
-        function_frame.define_variable(arg.clone());
+        ctx.define_variable(arg.clone());
     }
+    let result = compile(body, ctx);
+    // Pops frame before eventually returning error
+    ctx.pop_frame();
     Ok(FunctionExp {
         num_args: args.len(),
-        // TODO: extract external variables from frame
-        external_vars: Vec::new(),
-        body: compile(body, &mut function_frame, ctx)?
+        external_vars: Vec::new(), // TODO: extract external variables from frame
+        body: result?
     })
+}
+
+fn compile_block(ast: &AST, ctx: &mut CompilerContext, isolated: bool) -> Result<Exp, CompilerError> {
+    ctx.push_frame(isolated);
+    let result = compile(ast, ctx);
+    // Pops frame before eventually returning error
+    ctx.pop_frame();
+    result
 }

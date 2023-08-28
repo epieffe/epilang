@@ -11,7 +11,7 @@ use thiserror::Error;
 use rustyline::Editor;
 
 use compiler::epilang::EpilangParser;
-use compiler::frame::{GlobalContext, Frame};
+use compiler::context::CompilerContext;
 use compiler::compiler::compile;
 use compiler::error::CompilerError;
 use runtime::executor::{ExpressionError, evaluate};
@@ -42,19 +42,17 @@ pub fn run_file(file_path: String) {
     let text = fs::read_to_string(file_path)
         .expect("Unable to read the program file");
 
-    let mut frame: Frame = Default::default();
-    let mut ctx: GlobalContext = Default::default();
+    let mut ctx: CompilerContext = CompilerContext::new();
     let mut module: Module = Default::default();
 
-    match run_program(text, &mut frame, &mut ctx, &mut module) {
+    match run_program(text, &mut ctx, &mut module) {
         Ok(v) => println!("Result: {}", v.as_ref()),
         Err(e) => println!("{}", e),
     }
 }
 
 pub fn repl() {
-    let mut frame: Frame = Default::default();
-    let mut ctx: GlobalContext = Default::default();
+    let mut ctx: CompilerContext = CompilerContext::new();
     let mut module: Module = Default::default();
 
     let mut rl: Editor<()> = Editor::<()>::new().expect("Error creating editor");
@@ -73,7 +71,7 @@ pub fn repl() {
                         Err(_) => break
                     }
                 }
-                match run_program(text, &mut frame, &mut ctx, &mut module) {
+                match run_program(text, &mut ctx, &mut module) {
                     Ok(v) => {
                         match v.as_ref() {
                             Value::Unit => (),
@@ -88,11 +86,11 @@ pub fn repl() {
     }
 }
 
-fn run_program(line: String, frame: &mut Frame, ctx: &mut GlobalContext, module: &mut Module) -> Result<V, ProgramError> {
+fn run_program(line: String, ctx: &mut CompilerContext, module: &mut Module) -> Result<V, ProgramError> {
     let ast = EpilangParser::new().parse(&line)
         .map_err(|e| { ProgramError::SyntaxError(e.to_string()) })?;
 
-    let exp = compile(&ast, frame, ctx)
+    let exp = compile(&ast, ctx)
         .map_err(|e| { ProgramError::CompilerError(e) })?;
 
     let v = evaluate(&exp, module, 0)
