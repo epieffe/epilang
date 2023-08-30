@@ -14,7 +14,7 @@ impl Add for &Value {
             Value::Int(v1) => match other {
                 Value::Int(v2) => Ok(Value::Int(v1 + v2)),
                 Value::Float(v2) => Ok(Value::Float(*v1 as f32 + v2)),
-                Value::String(v2) => Ok(Value::String(v1.to_string() + v2.as_str())),
+                Value::String(v2) => Ok(Value::String(format!("{v1}{v2}"))),
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Add, Int, v.get_type())),
             },
 
@@ -25,14 +25,7 @@ impl Add for &Value {
                 v => Err(OperationError::IncompatibleTypes(BinaryOpcode::Add, Float, v.get_type())),
             },
 
-            Value::String(v1) => {
-                let mut result = v1.clone();
-                match other {
-                    Value::String(v2) => result.push_str(v2),
-                    v => result.push_str(v.to_string().as_str()),
-                }
-                Ok(Value::String(result))
-            }
+            Value::String(s) => Ok(Value::String(format!("{}{}", s, other))),
 
             Value::List(l1) => match other {
                 Value::List(l2) => {

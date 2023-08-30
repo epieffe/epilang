@@ -8,7 +8,8 @@ use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 
 use super::module::Module;
-use super::value::{V, Value, Function, Class, Object};
+use super::value::{V, Value, Class, Object};
+use super::function::{Function};
 use super::pointer::Ptr;
 
 #[derive(Error, Debug)]
@@ -194,14 +195,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
         }
 
         Exp::List { elements } => {
-            let mut list = Vec::with_capacity(elements.len());
-            for element in elements {
-                let value = match evaluate(element, module, stack_start)? {
-                    V::Ptr(p) => p,
-                    V::Val(v) => Ptr::from(v),
-                };
-                list.push(value)
-            }
+            let list = evaluate_list(elements, module, stack_start)?;
             Ok(V::Val(Value::List(list)))
         }
 
@@ -219,7 +213,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             let function = Function {
                 num_args: *num_args,
                 external_values: Vec::new(),
-                body: Box::new(body.clone()),
+                body: body.clone(),
             };
             let function_ptr = Ptr::from(Value::Function(function));
             match function_ptr.clone().as_mut_ref() {
@@ -235,6 +229,10 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             Ok(V::Ptr(function_ptr))
         },
 
+        Exp::BuiltInFunction(builtin_function) => {
+            Ok(V::Val(Value::BuiltInFunction(*builtin_function)))
+        }
+
         Exp::Closure(function_exp) => {
             let FunctionExp {
                 num_args, external_vars, body
@@ -243,7 +241,7 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             let function = Function {
                 num_args: *num_args,
                 external_values: external_values,
-                body: Box::new(body.clone()),
+                body: body.clone(),
             };
             Ok(V::Val(Value::Function(function)))
         },
@@ -253,17 +251,18 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             match fun.as_ref() {
                 // Function call
                 Value::Function(fun) => {
-                    let mut args_v = Vec::with_capacity(args.len());
-                    for arg in args {
-                        let v = evaluate(&arg, module, stack_start)?;
-                        args_v.push(v.into_ptr())
-                    }
+                    let args_v = evaluate_list(args, module, stack_start)?;
                     call_function(fun, args_v, module)
                 },
                 // Method call
                 Value::Method(method) => {
                     call_method(method.function.as_ref(), method.self_value, args, module, stack_start)
                 },
+                // Built-in function call
+                Value::BuiltInFunction(function_call) => {
+                    let args_v = evaluate_list(args, module, stack_start)?;
+                    function_call.call(args_v)
+                }
                 // Class constructor call
                 Value::Class(class) => {
                     // Create object
@@ -288,13 +287,13 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                 constructor: Function {
                     num_args: class_exp.constructor.num_args,
                     external_values: Vec::new(),
-                    body: Box::new(class_exp.constructor.body.clone())
+                    body: class_exp.constructor.body.clone()
                 },
                 methods: (&class_exp.methods).into_iter().map(|(k, v)| {
                     let function = Function {
                         num_args: v.num_args,
                         external_values: Vec::new(),// Class methods never have external values
-                        body: Box::new(v.body.clone()),
+                        body: v.body.clone(),
                     };
                     (k.clone(), Ptr::from(function))
                 }).collect(),
@@ -336,7 +335,7 @@ fn call_function(fun: &Function, args: Vec<Ptr<Value>>, module: &mut Module) -> 
         module.variables.extend_from_slice(&fun.external_values);
         // Push function args to variable stack
         module.variables.extend(args);
-        let result = evaluate(fun.body.as_ref(), module, function_stack_start);
+        let result = evaluate(&fun.body, module, function_stack_start);
         module.variables.truncate(function_stack_start);
         Ok(result?)
     } else {
@@ -353,4 +352,13 @@ fn call_method(fun: &Function, self_ptr: Ptr<Value>, args: &Vec<Exp>,  module: &
         args_v.push(v.into_ptr())
     }
     call_function(fun, args_v, module)
+}
+
+fn evaluate_list(exps: &Vec<Exp>,  module: &mut Module, stack_start: usize) -> Result<Vec<Ptr<Value>>, ExpressionError> {
+    let mut list = Vec::with_capacity(exps.len());
+    for arg in exps {
+        let v = evaluate(&arg, module, stack_start)?;
+        list.push(v.into_ptr())
+    }
+    Ok(list)
 }

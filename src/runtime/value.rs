@@ -1,11 +1,11 @@
 use std::fmt;
 use std::collections::HashMap;
 
-use crate::intermediate::constant::Constant;
-use crate::intermediate::constant::Type;
-use crate::intermediate::exp::Exp;
+use crate::intermediate::constant::{Constant, Type};
+use crate::intermediate::exp::BuiltInFunction;
 
 use super::pointer::Ptr;
+use super::function::{Function, Method};
 
 #[derive(Debug)]
 pub enum Value {
@@ -16,6 +16,7 @@ pub enum Value {
     String(String),
     List(Vec<Ptr<Value>>),
     Function(Function),
+    BuiltInFunction(BuiltInFunction),
     Class(Ptr<Class>),
     Object(Object),
     Method(Method),
@@ -64,9 +65,17 @@ impl Value {
             Value::String(_) => Type::String,
             Value::List(_) => Type::List,
             Value::Function(_) => Type::Function,
+            Value::BuiltInFunction(_) => Type::Function,
             Value::Class(_) => Type::Class,
             Value::Object(_) => Type::Object,
             Value::Method(_) => Type::Method,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Value::String(s) => format!("\"{}\"", s.clone()),
+            v => format!("{}", v)
         }
     }
 }
@@ -90,7 +99,7 @@ impl fmt::Display for Value {
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(float) => write!(f, "{}", float),
             Value::Bool(b) => write!(f, "{}", b),
-            Value::String(s) => write!(f, "\"{}\"", s),
+            Value::String(s) => write!(f, "{}", s),
             Value::List(l) => {
                 write!(f, "[")?;
                 if l.len() > 0 {
@@ -102,6 +111,7 @@ impl fmt::Display for Value {
                 write!(f, "]")
             },
             Value::Function(func) => write!(f, "[Function at {:p}]", func),
+            Value::BuiltInFunction(func) => write!(f, "[Function at {:p}]", func),
             Value::Class(class) => write!(f, "[Class {} at {:p}]", class.as_ref().name, class.as_ref()),
             Value::Object(o) => write!(f, "[{} object at {:p}]", o.class.as_ref().name, o),
             Value::Method(m) => write!(f, "[Method at {:p}]", m),
@@ -135,19 +145,6 @@ impl Object {
     pub fn get_method(&self, name: &str) -> Option<Ptr<Function>> {
         self.class.as_ref().methods.get(name).copied()
     }
-}
-
-#[derive(Debug)]
-pub struct Method {
-    pub self_value: Ptr<Value>,
-    pub function: Ptr<Function>
-}
-
-#[derive(Debug)]
-pub struct Function {
-    pub num_args: usize,
-    pub external_values: Vec<Ptr<Value>>,
-    pub body: Box<Exp>
 }
 
 #[derive(Debug)]

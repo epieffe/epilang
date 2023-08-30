@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::intermediate::exp::{Exp, FunctionExp, ClassExp};
+use crate::intermediate::exp::{Exp, FunctionExp, ClassExp, BuiltInFunction};
 
 use super::ast::AST;
 use super::error::CompilerError;
@@ -17,10 +17,16 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
             match ctx.variable_scope(name) {
                 // If identifier matches a variable name return variable expression
                 Some(scope) => Ok(Exp::Variable { scope }),
-                // Else if matches a class name return class expression
+                // If identifier matches a class name return class expression
                 None => match ctx.class_id(name) {
                     Some(id) => Ok(Exp::Class { id }),
-                    None => Err(CompilerError::UnknownIdentifier(name.clone())),
+                    // Check if identifier matches some built-in function name
+                    None => match name.as_str() {
+                        "print" => Ok(Exp::BuiltInFunction(BuiltInFunction::Print)),
+                        "println" => Ok(Exp::BuiltInFunction(BuiltInFunction::Println)),
+                        "input" => Ok(Exp::BuiltInFunction(BuiltInFunction::Input)),
+                        _ => Err(CompilerError::UnknownIdentifier(name.clone()))
+                    }
                 },
             }
         },

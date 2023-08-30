@@ -7,7 +7,7 @@ use super::opcode::UnaryOpcode;
 #[derive(Clone, Debug)]
 pub enum Exp {
     Constant { value: Constant },
-    Variable{ scope: usize },
+    Variable { scope: usize },
     Concatenation { first: Box<Exp>, second: Box<Exp> },
     BinaryOp { op: BinaryOpcode, arg1: Box<Exp>, arg2: Box<Exp> },
     UnaryOp { op: UnaryOpcode, arg: Box<Exp> },
@@ -19,6 +19,7 @@ pub enum Exp {
     List { elements: Vec<Exp> },
     Subscript { element: Box<Exp>, index: Box<Exp> },
     Function(Box<FunctionExp>),
+    BuiltInFunction(BuiltInFunction),
     Closure(Box<FunctionExp>),
     FunctionCall { fun: Box<Exp>, args: Vec<Exp> },
     ClassDef(Box<ClassExp>),
@@ -56,4 +57,11 @@ pub struct ClassExp {
     pub fields: Vec<String>,
     pub constructor: FunctionExp,
     pub methods: HashMap<String, FunctionExp>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum BuiltInFunction {
+    Print,
+    Println,
+    Input,
 }

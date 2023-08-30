@@ -75,10 +75,10 @@ pub fn repl() {
                     Ok(v) => {
                         match v.as_ref() {
                             Value::Unit => (),
-                            value => println!("{}", value)
+                            value => println!("{}", value.to_string())
                         }
                     },
-                    Err(e) => println!("{}", e),
+                    Err(e) => eprintln!("{}", e),
                 }
             },
             Err(_) => break
