@@ -10,7 +10,7 @@ use std::fs;
 use thiserror::Error;
 use rustyline::Editor;
 
-use compiler::epilang::EpilangParser;
+use compiler::epilang::ASTParser;
 use compiler::context::CompilerContext;
 use compiler::compiler::compile;
 use compiler::error::CompilerError;
@@ -87,7 +87,7 @@ pub fn repl() {
 }
 
 fn run_program(line: String, ctx: &mut CompilerContext, module: &mut Module) -> Result<V, ProgramError> {
-    let ast = EpilangParser::new().parse(&line)
+    let ast = ASTParser::new().parse(&line)
         .map_err(|e| { ProgramError::SyntaxError(e.to_string()) })?;
 
     let exp = compile(&ast, ctx)

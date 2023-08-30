@@ -14,20 +14,23 @@ match {
     _
 }
 
-pub Epilang: AST = {
-    <ast:AST?> => match ast {
-        None => AST::Constant(Constant::Unit),
+// Top level abstract syntax tree
+pub AST: AST = {
+    <ast:SemicolonTermination?> => match ast {
+        None => AST::Constant(Constant::Unit), // Empty text is parsed as unit constant
         Some(exp) => exp
     }
 }
 
-AST: AST = {
+SemicolonTermination: AST = {
+    Concatenation,
+    // Expressions ending with ';' are implicitly concatenated with unit
     <exp:Concatenation> ";" => {
         AST::Concatenation{ left: Box::new(exp), right: Box::new(AST::Constant(Constant::Unit)) }
-    },
-    Concatenation,
+    }
 }
 
+// Class definition
 Class: ClassAST = {
     "class" <name:Identifier> "{"
         <fields:Sequence<Identifier>?>
@@ -43,7 +46,8 @@ Class: ClassAST = {
     }
 }
 
-Conditional: AST = {
+Condition: AST = {
+    // If without else
     "if" <exp:Concatenation> "{" <thn:AST> "}" => {
         AST::Condition {
             exp: Box::new(exp),
@@ -51,6 +55,7 @@ Conditional: AST = {
             else_block: Box::new(AST::Constant(Constant::Unit))
         }
     },
+    // If with else
     "if" <exp:Concatenation> "{" <thn:AST> "}" "else" "{" <els:AST> "}" => {
         AST::Condition {
             exp: Box::new(exp),
@@ -58,26 +63,38 @@ Conditional: AST = {
             else_block: Box::new(els)
         }
     },
+    // Else if
+    "if" <exp:Concatenation> "{" <thn:AST> "}" "else" <else_if:Condition> => {
+        AST::Condition {
+            exp: Box::new(exp),
+            then_block: Box::new(thn),
+            else_block: Box::new(else_if)
+        }
+    },
 }
 
 Loop: AST = {
+    // While loop
     "while" <guard:Concatenation> "{" <exp:AST> "}" => {
         AST::While { guard: Box::new(guard), exp: Box::new(exp) }
     },
 }
 
+// Class constructor
 Constructor: FunctionAST = {
     "init" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
         FunctionAST { name: String::new(), args: args.unwrap_or_default(), body: body }
     }
 }
 
+// Function declaration
 FunctionDecl: FunctionAST = {
     "fn" <name:Identifier> "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
         FunctionAST { name: name, args: args.unwrap_or_default(), body: body }
     },
 }
 
+// Anonymous function aka closure
 AnonFunction: AST = {
     "fn" "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
         AST::Closure { args: args.unwrap_or_default(), exp: Box::new(exp) }
@@ -85,63 +102,69 @@ AnonFunction: AST = {
 }
 
 Term: AST = {
-    "let" <Identifier> => AST::Definition(<>),
-    "[" <elems:Comma<AST>?> "]" => AST::List { elements: elems.unwrap_or_default() },
+    "[" <elems:Comma<Disjunction>?> "]" => AST::List { elements: elems.unwrap_or_default() }, // List creation
+    "let" <Identifier> => AST::Definition(<>), // Variable declaration
+    "{" <AST> "}" => AST::Block(Box::new(<>)), // Blocks
+    "(" ")" => AST::Constant(Constant::Unit), // Empty round brackets are parsed as unit
+    "(" <SemicolonTermination> ")", // Round brackets
+    Class => AST::Class(Box::new(<>)),
+    FunctionDecl => AST::Function(Box::new(<>)),
     IntNum => AST::Constant(Constant::Int(<>)),
     FloatNum => AST::Constant(Constant::Float(<>)),
     StringLiteral => AST::Constant(Constant::String(<>)),
     BoolLiteral => AST::Constant(Constant::Bool(<>)),
     Identifier => AST::Identifier(<>),
-    "{" <AST> "}" => AST::Block(Box::new(<>)),
-    "(" <AST> ")",
-    Class => AST::Class(Box::new(<>)),
-    Conditional,
+    Condition,
     Loop,
-    FunctionDecl => AST::Function(Box::new(<>)),
     AnonFunction,
 }
 
+// <exp1> ; <exp2>
 Concatenation: AST = {
+    Assignment,
     <left:Concatenation> ";" <right:Assignment> => {
         AST::Concatenation{ left: Box::new(left), right: Box::new(right) }
     },
-    Assignment,
 }
 
+// <exp1> = <exp2>
 Assignment: AST = {
+    Disjunction,
     <left:Assignment> "=" <right:Disjunction> => {
         AST::Assignment(Box::new(left), Box::new(right))
     },
-    Disjunction
 }
 
+// <exp1> || <exp2>
 Disjunction: AST = {
+    Conjunction,
     <exp1:Disjunction> <op:DisjOp> <exp2:Conjunction> => {
         AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
     },
-    Conjunction,
 }
 
 DisjOp: BinaryOpcode = {
     "||" => BinaryOpcode::Or,
 }
 
+// <exp1> && <exp2>
 Conjunction: AST = {
+    Comparison,
     <exp1:Conjunction> <op:ConjOp> <exp2:Comparison> => {
         AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
     },
-    Comparison,
 }
 
 ConjOp: BinaryOpcode = {
     "&&" => BinaryOpcode::And,
 }
 
+// Arithmetical comparisons
 Comparison: AST = {
+    Summ,
     <exp1:Comparison> <op:CompareOp> <exp2:Summ> => {
         AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
     },
-    Summ,
 }
 
 CompareOp: BinaryOpcode = {
@@ -153,11 +176,12 @@ CompareOp: BinaryOpcode = {
     ">=" => BinaryOpcode::GreaterEquals,
 }
 
+// Summ or subtraction
 Summ: AST = {
+    Factor,
     <exp1:Summ> <op:SummOp> <exp2:Factor> => {
         AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
     },
-    Factor,
 }
 
 SummOp: BinaryOpcode = {
@@ -165,11 +189,12 @@ SummOp: BinaryOpcode = {
     "-" => BinaryOpcode::Sub,
 }
 
+// Multiplication or division
 Factor: AST = {
+    UnaryResult,
     <exp1:Factor> <op:FactorOp> <exp2:UnaryResult> => {
         AST::BinaryOp(Box::new(exp1), op, Box::new(exp2))
     },
-    UnaryResult,
 }
 
 FactorOp: BinaryOpcode = {
@@ -177,9 +202,10 @@ FactorOp: BinaryOpcode = {
     "/" => BinaryOpcode::Div,
 }
 
+// Unary operators
 UnaryResult: AST = {
-    <op:UnaryOp> <exp:CallOrSubscript> => AST::UnaryOp(op, Box::new(exp)),
     CallOrSubscript,
+    <op:UnaryOp> <exp:CallOrSubscript> => AST::UnaryOp(op, Box::new(exp)),
 }
 
 UnaryOp: UnaryOpcode = {
@@ -187,53 +213,61 @@ UnaryOp: UnaryOpcode = {
 }
 
 CallOrSubscript: AST = {
+    PropertyAccess,
     // Function call
-    <fun:CallOrSubscript> "(" <args:Comma<AST>?> ")" => {
+    <fun:CallOrSubscript> "(" <args:Comma<Disjunction>?> ")" => {
         AST::FunctionCall { fun: Box::new(fun), args: args.unwrap_or_default()}
     },
     // List subscript
-    <list:CallOrSubscript> "[" <index:AST> "]" => {
+    <list:CallOrSubscript> "[" <index:Disjunction> "]" => {
         AST::Subscript { element: Box::new(list), index: Box::new(index)}
     },
-    PropertyAccess,
 }
 
+// Field or method access
 PropertyAccess: AST = {
+    Term,
     <exp: PropertyAccess> "." <name:Identifier> => {
         AST::PropertyAccess { exp: Box::new(exp), property: name }
     },
-    Term,
 }
 
+// String identifier to name variables, fields, classes etc
 Identifier: String = {
     r"[a-zA-Z][a-zA-Z_0-9]*" => <>.to_owned()
 }
 
+// Integer number
 IntNum: i32 = {
     r"-?[0-9]+" => i32::from_str(<>).unwrap()
 }
 
+// Float number
 FloatNum: f32 = {
     r"-?[0-9]+\.[0-9]+" => f32::from_str(<>).unwrap()
 }
 
+// String literal (eg: "Hello World")
 StringLiteral: String = {
     r#""[^"]*""# => <>[1..<>.len() - 1].to_owned()
 }
 
+// Boolean
 BoolLiteral: bool = {
     "true" => true,
     "false" => false,
 }
 
+// Sequence of elements with no separator
 Sequence<T>: Vec<T> = {
     <e:T> => vec![e],
-    <mut list:Comma<T>> <e:T> => {
+    <mut list:Sequence<T>> <e:T> => {
         list.push(e);
         list
     }
 }
 
+// Sequence of elements separated by ','
 Comma<T>: Vec<T> = {
     <e:T> => vec![e],
     <mut list:Comma<T>> "," <e:T> => {
