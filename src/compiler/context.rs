@@ -12,10 +12,17 @@ struct Frame {
     pub isolated: bool,
 }
 
+#[derive(Default, Debug)]
+struct Module {
+    pub variables: HashMap<String, usize>,
+    pub classes: HashMap<String, usize>,
+}
+
 #[derive(Debug)]
 pub struct CompilerContext {
     frames: Vec<Frame>,
     class_count: usize,
+    modules: HashMap<String, Module>,
 }
 
 impl CompilerContext {
@@ -27,7 +34,7 @@ impl CompilerContext {
             isolated: false,
         };
         let frames = vec![root_frame];
-        CompilerContext { frames, class_count: 0 }
+        CompilerContext { frames, class_count: 0, modules: HashMap::new() }
     }
 
     pub fn push_frame(&mut self, isolated: bool) {

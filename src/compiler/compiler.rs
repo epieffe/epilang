@@ -170,6 +170,10 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
             let exp = compile(exp, ctx)?;
             Ok(Exp::PropertyAccess { exp: Box::new(exp), property: property.clone() })
         },
+
+        AST::Import { names, module } => {
+             todo!()
+        }
     }
 }
 

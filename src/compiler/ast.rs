@@ -20,6 +20,7 @@ pub enum AST {
     FunctionCall { fun: Box<AST>, args: Vec<AST> },
     Class(Box<ClassAST>),
     PropertyAccess { exp: Box<AST>, property: String },
+    Import { names: Vec<String>, module: String },
 }
 
 pub struct FunctionAST {
