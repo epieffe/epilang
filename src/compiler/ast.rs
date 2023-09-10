@@ -30,7 +30,11 @@ pub struct FunctionAST {
 
 pub struct ClassAST {
     pub name: String,
-    pub fields: Vec<String>,
+    pub fields: Vec<FieldAST>,
     pub constructor: Option<FunctionAST>,
     pub methods: Vec<FunctionAST>,
+}
+
+pub struct FieldAST {
+    pub name: String,
 }

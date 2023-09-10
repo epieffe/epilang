@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::intermediate::exp::{Exp, FunctionExp, ClassExp, BuiltInFunction};
+use crate::intermediate::exp::{Exp, FunctionExp, ClassExp, BuiltInFunction, FieldExp};
 
 use super::ast::AST;
 use super::error::CompilerError;
@@ -139,16 +139,22 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
         },
 
         AST::Class(class_ast) => {
+            let class_ast = class_ast.as_ref();
+            // Build class fields
+            let mut fields = Vec::with_capacity(class_ast.fields.len());
+            for field in class_ast.fields.iter() {
+                fields.push(FieldExp { name: field.name.clone() })
+            }
             // Build class constructor (if present)
-            let constructor = class_ast.as_ref().constructor.as_ref().map(|fun| {
+            let constructor = class_ast.constructor.as_ref().map(|fun| {
                 let mut args = Vec::with_capacity(fun.args.len());
                 args.push("self".to_owned()); // Push self as implicit first argument in constructor
                 args.extend_from_slice(&fun.args);
                 compile_function(None, &args, &fun.body, ctx)
             }).transpose()?;
             // Build class methods
-            let mut methods = HashMap::with_capacity(class_ast.as_ref().methods.len());
-            for m in &class_ast.as_ref().methods {
+            let mut methods = HashMap::with_capacity(class_ast.methods.len());
+            for m in &class_ast.methods {
                 let mut args = Vec::with_capacity(m.args.len());
                 args.push("self".to_owned()); // Push self as implicit first argument in methods
                 args.extend_from_slice(&m.args);
@@ -157,9 +163,9 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
             }
             // Build class
             let class_exp = ClassExp {
-                id: ctx.define_class(class_ast.as_ref().name.clone())?,
-                name: class_ast.as_ref().name.clone(),
-                fields: class_ast.as_ref().fields.clone(),
+                id: ctx.define_class(class_ast.name.clone())?,
+                name: class_ast.name.clone(),
+                fields,
                 constructor: constructor.unwrap_or(FunctionExp::default_constructor()),
                 methods,
             };

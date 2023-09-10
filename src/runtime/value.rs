@@ -139,9 +139,14 @@ impl fmt::Display for Value {
 #[derive(Debug)]
 pub struct Class {
     pub name: String,
-    pub fields: Vec<String>,
+    pub fields: Vec<Field>,
     pub constructor: Function,
     pub methods: HashMap<String, Ptr<Function>>,
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub name: String,
 }
 
 #[derive(Debug)]

@@ -8,7 +8,7 @@ use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::runtime::operations::OperationError;
 
 use super::module::Module;
-use super::value::{V, Value, Class, Object};
+use super::value::{V, Value, Class, Object, Field};
 use super::function::{Function};
 use super::pointer::Ptr;
 
@@ -276,8 +276,8 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                 Value::Class(class) => {
                     // Create object
                     let mut fields = HashMap::with_capacity(class.as_ref().fields.len());
-                    for field_name in &class.as_ref().fields {
-                        fields.insert(field_name.clone(), Ptr::unit());
+                    for field in &class.as_ref().fields {
+                        fields.insert(field.name.clone(), Ptr::unit());
                     }
                     let object = Value::Object(Object { class: *class, fields});
                     // Call constructor
@@ -292,13 +292,15 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
             // Create class
             let class = Class {
                 name: class_exp.name.clone(),
-                fields: class_exp.fields.clone(),
+                fields: class_exp.fields.iter().map(|f| {
+                    Field { name: f.name.clone() }
+                }).collect(),
                 constructor: Function {
                     num_args: class_exp.constructor.num_args,
                     external_values: Vec::new(),
                     body: class_exp.constructor.body.clone()
                 },
-                methods: (&class_exp.methods).into_iter().map(|(k, v)| {
+                methods: class_exp.methods.iter().map(|(k, v)| {
                     let function = Function {
                         num_args: v.num_args,
                         external_values: Vec::new(),// Class methods never have external values

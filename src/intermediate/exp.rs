@@ -54,9 +54,14 @@ impl FunctionExp {
 pub struct ClassExp {
     pub id: usize,
     pub name: String,
-    pub fields: Vec<String>,
+    pub fields: Vec<FieldExp>,
     pub constructor: FunctionExp,
     pub methods: HashMap<String, FunctionExp>,
+}
+
+#[derive(Clone, Debug)]
+pub struct FieldExp {
+    pub name: String,
 }
 
 #[derive(Copy, Clone, Debug)]

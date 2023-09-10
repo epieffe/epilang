@@ -1,4 +1,4 @@
-use crate::compiler::ast::{AST, ClassAST, FunctionAST};
+use crate::compiler::ast::{AST, ClassAST, FunctionAST, FieldAST};
 use crate::intermediate::opcode::{BinaryOpcode, UnaryOpcode};
 use crate::intermediate::constant::Constant;
 
@@ -33,7 +33,7 @@ SemicolonTermination: AST = {
 // Class definition
 Class: ClassAST = {
     "class" <name:Identifier> "{"
-        <fields:Sequence<Identifier>?>
+        <fields:Sequence<FieldDecl>?>
         <constructor:Constructor?>
         <methods:Sequence<FunctionDecl>?>
     "}" => {
@@ -85,6 +85,11 @@ Constructor: FunctionAST = {
     "init" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
         FunctionAST { name: String::new(), args: args.unwrap_or_default(), body: body }
     }
+}
+
+// Field declaration
+FieldDecl: FieldAST = {
+    "let" <Identifier> => FieldAST { name: <> }
 }
 
 // Function declaration
