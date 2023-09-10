@@ -146,12 +146,7 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
                 fields.push(FieldExp { name: field.name.clone() })
             }
             // Build class constructor (if present)
-            let constructor = class_ast.constructor.as_ref().map(|fun| {
-                let mut args = Vec::with_capacity(fun.args.len());
-                args.push("self".to_owned()); // Push self as implicit first argument in constructor
-                args.extend_from_slice(&fun.args);
-                compile_function(None, &args, &fun.body, ctx)
-            }).transpose()?;
+            let mut constructor = None;
             // Build class methods
             let mut methods = HashMap::with_capacity(class_ast.methods.len());
             for m in &class_ast.methods {
@@ -159,7 +154,11 @@ pub fn compile(ast: &AST, ctx: &mut CompilerContext) -> Result<Exp, CompilerErro
                 args.push("self".to_owned()); // Push self as implicit first argument in methods
                 args.extend_from_slice(&m.args);
                 let function_exp = compile_function(None, &args, &m.body, ctx)?;
-                methods.insert(m.name.clone(), function_exp);
+                if m.name == "self" {
+                    constructor = Some(function_exp);
+                } else {
+                    methods.insert(m.name.clone(), function_exp);
+                }
             }
             // Build class
             let class_exp = ClassExp {

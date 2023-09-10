@@ -34,13 +34,11 @@ SemicolonTermination: AST = {
 Class: ClassAST = {
     "class" <name:Identifier> "{"
         <fields:Sequence<FieldDecl>?>
-        <constructor:Constructor?>
         <methods:Sequence<FunctionDecl>?>
     "}" => {
         ClassAST {
             name: name,
             fields: fields.unwrap_or_default(),
-            constructor: constructor,
             methods: methods.unwrap_or_default(),
         }
     }
@@ -78,13 +76,6 @@ Loop: AST = {
     "while" <guard:Concatenation> "{" <exp:AST> "}" => {
         AST::While { guard: Box::new(guard), exp: Box::new(exp) }
     },
-}
-
-// Class constructor
-Constructor: FunctionAST = {
-    "init" "(" <args:Comma<Identifier>?> ")" "{" <body:AST> "}" => {
-        FunctionAST { name: String::new(), args: args.unwrap_or_default(), body: body }
-    }
 }
 
 // Field declaration
