@@ -30,6 +30,8 @@ pub enum ExpressionError {
     NoSuchFieldOrMethod(String),
     #[error("TypeError: no such field {0}")]
     NoSuchField(String),
+    #[error("TypeError: expected value of type {0}, found {1}")]
+    UnexpectedType(Type, Type),
 }
 
 pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V, ExpressionError> {
@@ -259,9 +261,16 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                     call_method(method.function.as_ref(), method.self_value, args, module, stack_start)
                 },
                 // Built-in function call
-                Value::BuiltInFunction(function_call) => {
+                Value::BuiltInFunction(fun) => {
                     let args_v = evaluate_list(args, module, stack_start)?;
-                    function_call.call(args_v)
+                    fun.call(args_v)
+                },
+                // Built-in method call
+                Value::BuiltInMethod(method) => {
+                    let mut args_v = Vec::with_capacity(args.len() + 1);
+                    args_v.push(method.self_value);
+                    args_v.extend(evaluate_list(args, module, stack_start)?);
+                    method.function.call(args_v)
                 }
                 // Class constructor call
                 Value::Class(class) => {
@@ -311,7 +320,11 @@ pub fn evaluate(exp: &Exp, module: &mut Module, stack_start: usize) -> Result<V,
                 // Then check if a method with property name exists
                 None => match v.as_ref().get_method(property) {
                     Some(m) => Ok(V::Val(Value::Method(m))),
-                    None => Err(ExpressionError::NoSuchFieldOrMethod(property.clone()))
+                    // Then check if a built-in method with property name exists
+                    None => match v.as_ref().get_builtin_methd(property) {
+                        Some(m) => Ok(V::Val(Value::BuiltInMethod(m))),
+                        None => Err(ExpressionError::NoSuchFieldOrMethod(property.clone()))
+                    }
                 },
             }
         },

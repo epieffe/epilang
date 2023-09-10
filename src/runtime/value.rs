@@ -5,7 +5,7 @@ use crate::intermediate::constant::{Constant, Type};
 use crate::intermediate::exp::BuiltInFunction;
 
 use super::pointer::Ptr;
-use super::function::{Function, Method};
+use super::function::{Function, Method, BuiltInMethod};
 
 #[derive(Debug)]
 pub enum Value {
@@ -20,6 +20,7 @@ pub enum Value {
     Class(Ptr<Class>),
     Object(Object),
     Method(Method),
+    BuiltInMethod(BuiltInMethod),
 }
 
 impl Value {
@@ -45,11 +46,25 @@ impl Value {
     pub fn get_method(&self, name: &str) -> Option<Method> {
         match self {
             Value::Object(o) => {
-                o.get_method(name).map(|f| {
-                    Method {
-                        self_value: Ptr::from(self),
-                        function: f,
-                    }
+                o.get_method(name).map(|function| {
+                    Method { self_value: Ptr::from(self), function }
+                })
+            },
+            _ => None
+        }
+    }
+
+    pub fn get_builtin_methd(&self, name: &str) -> Option<BuiltInMethod> {
+        match self {
+            Value::List(_) => {
+                match name {
+                    "len" => Some(BuiltInFunction::ListLength),
+                    "push" => Some(BuiltInFunction::ListPush),
+                    "pop" => Some(BuiltInFunction::ListPop),
+                    "remove" => Some(BuiltInFunction::ListRemove),
+                    _ => None
+                }.map(|function| {
+                    BuiltInMethod { self_value: Ptr::from(self), function }
                 })
             },
             _ => None
@@ -69,6 +84,7 @@ impl Value {
             Value::Class(_) => Type::Class,
             Value::Object(_) => Type::Object,
             Value::Method(_) => Type::Method,
+            Value::BuiltInMethod(_) => Type::Method,
         }
     }
 
@@ -115,6 +131,7 @@ impl fmt::Display for Value {
             Value::Class(class) => write!(f, "[Class {} at {:p}]", class.as_ref().name, class.as_ref()),
             Value::Object(o) => write!(f, "[{} object at {:p}]", o.class.as_ref().name, o),
             Value::Method(m) => write!(f, "[Method at {:p}]", m),
+            Value::BuiltInMethod(m) => write!(f, "[Method at {:p}]", m),
         }
     }
 }

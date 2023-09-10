@@ -64,4 +64,8 @@ pub enum BuiltInFunction {
     Print,
     Println,
     Input,
+    ListLength,
+    ListPush,
+    ListPop,
+    ListRemove,
 }
