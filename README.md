@@ -1,38 +1,37 @@
 # Epilang
-Epilang is a high-level, general-purpose programming language.
+Epilang is a high-level, interpreted, general-purpose programming language with a Rust-like syntax.
 
-The syntax is quite similar to Rust, while the programmer does not need to worry about memory management.
+Visit the [Wiki](https://github.com/epieffe/epilang/wiki) for quickstart and documentation.
 
-```rust
-// Quick Epilang example
-let x = 3;
-let sum = fn(x, y) { x + y };
-let result = if (sum(3, x) < 6) { false } else { true };
-// returns `true`
-result
-```
+## Installation
+Epilang standalone binaries can be downloaded from the [Release](https://github.com/epieffe/epilang/releases) page.
 
-Pass a file path as first argument to run it:
+Pass a source file path as argument to the epilang executable to run it:
 ```bash
-# At the moment we recommend to use the .rs extension
-# in order to have Rust syntax highlighting in text editors
-$ epilang path/to/file.rs
+epilang path/to/file.epi
 ```
-
-or pass no args to open an interactive shell:
+#### Interactive shell
+Run the epilang executable with no args to start the Epilang interactive shell:
 ```bash
-# Open interactive Epilang shell
-$ epilang
+epilang
+```
+The following is an example interaction with the Epilang interactive shell:
+```bash
+epilang> let x = 3
+epilang> x
+3
+epilang> x + 3
+6
 ```
 
 ## Build from sources
 To build this project from source you need [Rust](https://www.rust-lang.org/). To install it follow the instructions on the official [installation page](https://www.rust-lang.org/tools/install).
 
-After installing you must be able to run `cargo` from the command line:
+After installing you must be able to run `cargo` from the command line.
+
+The following command prints the Cargo version, just to be sure it is installed.
 ```bash
-# Print cargo version
-$ cargo -V
-cargo 1.66.0 (d65d197ad 2022-11-15)
+cargo -V
 ```
 
 Download Epilang source code from this repository and navigate to the source code directory on the command line:
@@ -41,13 +40,27 @@ git clone https://github.com/epieffe/epilang.git
 cd epilang
 ```
 
-To build the project run the following command:
-```bash
-$ cargo build --release
-```
-This command creates an executable file in `targert/release/epilang`. Run this file to start Epilang.
-
-To compile the code and then run the resultant executable all in one command run the following:
+#### Run from source
+To create a debug build of the project and immediately start the Epilang interacive shell use the following command:
 ``` bash
 cargo run
 ```
+
+Or pass a file path as argument to run it:
+``` bash
+cargo run path/to/file.epi
+```
+
+#### Debug build
+To create a debug build of the project use the following command:
+```bash
+cargo build
+```
+This command creates an executable file in `targert/debug/epilang`. Run this file to start Epilang.
+
+#### Release build
+To create an optimized build of the project use the following command:
+```bash
+cargo build --release
+```
+This command creates an executable file in `targert/release/epilang`. Run this file to start Epilang.
