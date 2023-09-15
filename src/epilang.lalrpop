@@ -92,7 +92,10 @@ FunctionDecl: FunctionAST = {
 
 // Anonymous function aka closure
 AnonFunction: AST = {
-    "fn" "(" <args:Comma<Identifier>?> ")" "{" <exp:AST> "}" => {
+    "||" "{" <exp:AST> "}" => {
+        AST::Closure { args: Vec::new(), exp: Box::new(exp) }
+    },
+    "|" <args:Comma<Identifier>?> "|" "{" <exp:AST> "}" => {
         AST::Closure { args: args.unwrap_or_default(), exp: Box::new(exp) }
     },
 }
